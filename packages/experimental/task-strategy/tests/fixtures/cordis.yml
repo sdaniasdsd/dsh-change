@@ -1,0 +1,54 @@
+- name: cordis:llm
+- name: cordis:sessions
+- name: cordis:projections
+- name: cordis:system-prompt
+- name: cordis:tools
+- name: cordis:agents
+- name: cordis:agent-loop
+  config:
+    agents: []
+- name: cordis:subagents
+- name: cordis:spawn
+- name: cordis:jobs
+- name: cordis:tool-jobs
+  config:
+    completionDelivery: quiet
+- name: cordis:presets
+  config:
+    default: coding
+- name: cordis:preset
+  config:
+    id: coding
+    plugins:
+      - name: ./preset-tool.js
+        config:
+          tool: coding_only
+- name: cordis:preset
+  config:
+    id: reviewing
+    plugins:
+      - name: ./preset-tool.js
+        config:
+          tool: reviewing_only
+- id: task-strategy
+  name: cordis:strategy-adapter
+  config:
+    provider: spawn
+    toolPrefix: task_strategy
+    allowedPresets: [reviewing, coding]
+    strategies:
+      - id: review-first
+        description: Review, then implement
+        plan:
+          name: Review then implement
+          stages:
+            - name: review
+              tasks:
+                - label: inspect
+                  preset: reviewing
+                  instruction: Identify risks, do not edit
+            - name: implement
+              tasks:
+                - label: implement
+                  preset: coding
+                  instruction: Implement after reviewing prior-stage findings

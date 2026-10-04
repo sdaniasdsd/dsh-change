@@ -1,6 +1,12 @@
 /** Independent author strategy registry. Cordis integration lives in ./cordis.ts. */
+import type TaskStrategies from './cordis.ts'
 import type { AuthorStrategy, ExecutionPlan, StrategyInput } from './types.ts'
+
+declare module '@deepseek-ai/cordis' {
+  interface Context { taskStrategies: TaskStrategies }
+}
 export type * from './types.ts'
+export type { default as TaskStrategies } from './cordis.ts'
 export { executePlan, validatePlan } from './executor.ts'
 
 /** Names author decisions without modifying DSH's plugin registry. */

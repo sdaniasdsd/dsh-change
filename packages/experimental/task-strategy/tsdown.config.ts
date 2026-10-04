@@ -1,9 +1,9 @@
 import { defineConfig } from 'tsdown'
 
-/** Build the package root as a self-contained ESM bundle. */
+/** Build the independent strategy library and its separately opt-in Cordis carrier. */
 export default defineConfig([
   {
-    entry: ['src/index.ts'],
+    entry: ['src/index.ts', 'src/cordis.ts'],
     outDir: 'lib',
     format: ['esm'],
     platform: 'node',

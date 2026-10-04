@@ -1,0 +1,9 @@
+# Explicit opt-in carrier. Strategy policies are configuration/data, not plugin declarations.
+- insert:
+    - id: experimental-task-strategy
+      name: './node_modules/@deepseek-ai/dsh-experimental-task-strategy/lib/cordis.js'
+      config:
+        provider: spawn
+        toolPrefix: task_strategy
+        allowedPresets: [standard]
+        strategies: []

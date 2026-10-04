@@ -1,0 +1,10 @@
+# Bilingual-pair consistency record for task-strategy.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/subsystems/task-strategy.md
+/task-strategies:
+  en: 045e1ca1758ee095
+  zh: 7332cd9642f446aa
+/task-strategies/service-api:
+  en: e021611a4e2514ed
+  zh: 3c6052c6c2a166bd
