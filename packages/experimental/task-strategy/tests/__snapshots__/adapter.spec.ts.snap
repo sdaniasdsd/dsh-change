@@ -1,0 +1,67 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`Loader-composed strategy adapter > records upper model decisions and original job collection without an API key > recorded upper strategy decisions 1`] = `
+[
+  {
+    "callId": "preview",
+    "content": [
+      {
+        "text": "{"name":"Review then implement","stages":[{"name":"review","tasks":[{"label":"inspect","preset":"reviewing","instruction":"Identify risks, do not edit"}]},{"name":"implement","tasks":[{"label":"implement","preset":"coding","instruction":"Implement after reviewing prior-stage findings"}]}]}",
+        "type": "text",
+      },
+    ],
+    "isError": false,
+  },
+  {
+    "callId": "dispatch",
+    "content": [
+      {
+        "text": "{"jobId":"strategy-1","name":"Review then implement","status":"running","progress":"job_output","cancel":"job_kill"}",
+        "type": "text",
+      },
+    ],
+    "isError": false,
+  },
+]
+`;
+
+exports[`Loader-composed strategy adapter > runs original DSH children with independent presets and progress > model-visible execution plan 1`] = `
+{
+  "name": "Review then implement",
+  "stages": [
+    {
+      "name": "review",
+      "tasks": [
+        {
+          "instruction": "Identify risks, do not edit",
+          "label": "inspect",
+          "preset": "reviewing",
+        },
+      ],
+    },
+    {
+      "name": "implement",
+      "tasks": [
+        {
+          "instruction": "Implement after reviewing prior-stage findings",
+          "label": "implement",
+          "preset": "coding",
+        },
+      ],
+    },
+  ],
+}
+`;
+
+exports[`Loader-composed strategy adapter > runs original DSH children with independent presets and progress > model-visible execution result 1`] = `
+[
+  {
+    "label": "inspect",
+    "output": "risks found",
+  },
+  {
+    "label": "implement",
+    "output": "implemented",
+  },
+]
+`;

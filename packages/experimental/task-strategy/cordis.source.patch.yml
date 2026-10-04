@@ -1,0 +1,51 @@
+# Explicit opt-in source carrier. Author policies are data, not plugin rows.
+- insert:
+    - id: experimental-task-strategy
+      name: './src/cordis.ts'
+      config:
+        allowedPresets: [standard, ptc, minimal, cordis]
+        maxConcurrent: 2
+        strategies:
+          - id: direct
+            description: Execute directly with the standard DSH composition
+            plan:
+              name: Direct execution
+              stages:
+                - name: execute
+                  tasks:
+                    - label: implement
+                      preset: standard
+                      instruction: Complete the user's task and verify the result.
+          - id: cautious
+            description: Inspect and review concurrently, then implement; preference speed=fast skips review
+            plan:
+              name: Inspect then implement
+              stages:
+                - name: inspect
+                  tasks:
+                    - label: architecture
+                      preset: standard
+                      instruction: Read relevant code and propose an implementation approach. Do not edit.
+                      tools:
+                        allow: [read, glob, grep]
+                    - label: risks
+                      preset: standard
+                      instruction: Independently inspect edge cases and required tests. Do not edit.
+                      tools:
+                        allow: [read, glob, grep]
+                - name: implement
+                  tasks:
+                    - label: implement
+                      preset: standard
+                      instruction: Use earlier findings as data, implement the requested changes, and verify them.
+            variants:
+              - preference: speed
+                equals: fast
+                plan:
+                  name: Fast execution
+                  stages:
+                    - name: execute
+                      tasks:
+                        - label: implement
+                          preset: standard
+                          instruction: Complete the task directly and run focused verification.

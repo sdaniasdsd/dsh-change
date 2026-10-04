@@ -1,0 +1,75 @@
+- id: df4b8a39
+  name: cordis:llm
+- id: 3f2c6ab6
+  name: cordis:sessions
+- id: 6303e906
+  name: cordis:projections
+- id: 9ca64b81
+  name: cordis:system-prompt
+- id: 78c5570e
+  name: cordis:tools
+- id: ef008016
+  name: cordis:agents
+- id: b21b984b
+  name: cordis:agent-loop
+  config:
+    agents: []
+- id: 354990d0
+  name: cordis:subagents
+- id: ab035458
+  name: cordis:spawn
+- id: 4dcaf9a7
+  name: cordis:jobs
+- id: 9ce54ef4
+  name: cordis:tool-jobs
+  config:
+    completionDelivery: quiet
+- id: 90336c82
+  name: cordis:presets
+  config:
+    default: coding
+- id: 7972e4eb
+  name: cordis:preset
+  config:
+    id: coding
+    plugins:
+      - name: ./preset-tool.js
+        config:
+          tool: coding_only
+- id: ef9a660d
+  name: cordis:preset
+  config:
+    id: reviewing
+    plugins:
+      - name: ./preset-tool.js
+        config:
+          tool: reviewing_only
+- id: task-strategy
+  name: cordis:strategy-adapter
+  config:
+    provider: spawn
+    toolPrefix: task_strategy
+    maxConcurrent: 2
+    maxTasks: 8
+    maxPlanBytes: 8192
+    maxResultBytes: 8192
+    maxOutputBytes: 4096
+    allowedPresets:
+      - coding
+      - reviewing
+    strategies:
+      - id: review-first
+        description: Review, then implement
+        plan:
+          name: Review then implement
+          stages:
+            - name: review
+              tasks:
+                - label: inspect
+                  preset: reviewing
+                  instruction: Identify risks, do not edit
+            - name: implement
+              tasks:
+                - label: implement
+                  preset: coding
+                  instruction: Implement after reviewing prior-stage findings

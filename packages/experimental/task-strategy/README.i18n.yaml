@@ -1,0 +1,52 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/experimental/task-strategy/README.md
+/:
+  en: ce27a1e337993f07
+  zh: 2b88226221db7de6
+/deepseek-ai-dsh-experimental-task-strategy:
+  en: 4687e7ff363d0aa6
+  zh: 8f60d9209397983c
+/deepseek-ai-dsh-experimental-task-strategy/summary:
+  en: 2e5d78ac69a598ea
+  zh: d0a13f60bc7f639b
+/deepseek-ai-dsh-experimental-task-strategy/table-of-contents:
+  en: d152484eb41ac6b4
+  zh: 1db86285abf6c499
+/deepseek-ai-dsh-experimental-task-strategy/use-this-package:
+  en: bbff250eba0f1b89
+  zh: 0a618f05cc88ee2b
+/deepseek-ai-dsh-experimental-task-strategy/use-this-package/independent-author-decisions:
+  en: aebe6d75bab363db
+  zh: 8bbfdc647db7ef5e
+/deepseek-ai-dsh-experimental-task-strategy/use-this-package/dsh-source-trial:
+  en: ff458b5d898a0d6b
+  zh: ce57344923e1d27f
+/deepseek-ai-dsh-experimental-task-strategy/understand-the-implementation:
+  en: 794dc5d7567991b6
+  zh: 587f55cabc342395
+/deepseek-ai-dsh-experimental-task-strategy/further-exploration:
+  en: 8069a7bd6f92c22e
+  zh: bd5d3e83bc31a1cd
+/deepseek-ai-dsh-experimental-task-strategy/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-experimental-task-strategy/model-experience/upper-decision-tools-and-lower-task-input:
+  en: 54734e7f89a54236
+  zh: 3b160813f5823038
+/deepseek-ai-dsh-experimental-task-strategy/model-experience/upper-decision-tools-and-lower-task-input/what-the-model-sees:
+  en: c74b86c37c60827a
+  zh: 36bd23bfe4efb831
+/deepseek-ai-dsh-experimental-task-strategy/model-experience/upper-decision-tools-and-lower-task-input/token-effect:
+  en: e84e12351dcc4d45
+  zh: 44ebc12c03558541
+/deepseek-ai-dsh-experimental-task-strategy/model-experience/upper-decision-tools-and-lower-task-input/kv-cache-effect:
+  en: f04e415e58247651
+  zh: a6268a03d444f8fe
+/deepseek-ai-dsh-experimental-task-strategy/known-limitations-and-deferred-work:
+  en: 92806988ba858342
+  zh: 8d402862bcb7319e
+/deepseek-ai-dsh-experimental-task-strategy/known-limitations-and-deferred-work/dev-note:
+  en: e67f633dc6fe7773
+  zh: e88aeb617ffb74ea
