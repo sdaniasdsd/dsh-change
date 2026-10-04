@@ -1,12 +1,34 @@
-# DeepSeek Harness
+# DeepSeek Harness — 策略增强版
 
 [English](README.md) | 中文
+
+本仓库是独立维护的 DeepSeek Harness 实验性 fork，不是 DeepSeek 官方发行版。它在原版 DSH 执行层上增加了由作者控制的任务策略层。源码镜像：[GitHub](https://github.com/sdaniasdsd/dsh-change) 和 [Gitee](https://gitee.com/chunyouzhidi/dsh-policy-version)。
 
 DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的开源 agent harness（智能体框架）。
 
 它构建于**一切皆插件**的架构之上，由 [Cordis](https://github.com/cordiverse/cordis) 驱动，其设计参见论文 [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512)。
 
-文档：[https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
+上游文档：[https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
+
+## 策略增强版：我们的改动
+
+上层决定分发哪些任务、按什么顺序执行、使用什么能力；实际工作由原版 DSH subagent 完成。作者自行定义决策偏好，不替换模型循环，也不把每个策略混入 DSH 插件体系。
+
+- **独立策略部件：**具名策略接收任务与作者偏好，产出执行计划。作者可以编写 JavaScript 决策函数，也可以在配置中按偏好选择不同流程。
+- **任务流程与并发：**计划由有序阶段组成。同一阶段的任务可以在配置的单次运行并发上限内同时执行；前一阶段结束后，后一阶段接收已有结果。
+- **下层能力选择：**每个任务选择允许使用的原版 DSH preset，由 preset 提供插件组合，并可限制工具或选择模型与提供商。选择 preset 不会额外授予文件系统或审批权限。
+- **沿用原版 DSH 执行：**可选的 Cordis 接入部件把独立策略部件连接到现有 subagent、preset 和 Job。下层任务仍由原版 agent loop 执行并负责资源清理。
+- **进度观察与取消：**上层 agent 通过 `task_strategy_list`、`task_strategy_plan`、`task_strategy_run` 发现、预览和分发计划。现有 `job_list`、`job_output`、`job_kill` 提供进度、已完成任务的子会话标识、结果和取消操作。
+
+策略层需要显式启用：不加载补丁的 profile 保留原版组合。示例配置提供 `direct` 和 `cautious`；后者先并行进行两项只读检查，再执行实现任务，而 `speed=fast` 偏好会选择更短的流程。
+
+这个原型不是持久化工作流引擎：没有全局并发配额、自动重试、暂停/恢复或崩溃恢复。下层任务共享工作文件，并发写入需要作者安排安全流程。真实模型执行需要配置模型提供商；附带集成测试使用无密钥的脚本化模型适配器，不是真实模型质量评分。
+
+建议从这里开始阅读：
+
+- [策略用法、源码结构与限制](packages/experimental/task-strategy/README.zh.md)
+- [作者偏好与任务流程示例](packages/experimental/task-strategy/cordis.source.patch.yml)
+- [策略子系统与 API 参考](docs/subsystems/task-strategy.zh.md)
 
 ## 开发者预览
 
@@ -20,7 +42,7 @@ DeepSeek Harness 处于 _开发者预览_ 阶段，正在快速迭代。**未来
 
 ### 通过 `npm` 运行
 
-安装 `Node.js`，然后运行：
+这条命令运行上游 npm 发行版，不包含本 fork 的策略增强。安装 `Node.js`，然后运行：
 
 ```sh
 npx @deepseek-ai/dsh web
@@ -35,8 +57,8 @@ npx @deepseek-ai/dsh web
 如需从仓库源码运行：
 
 ```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
+git clone https://github.com/sdaniasdsd/dsh-change.git dsh-policy-version
+cd dsh-policy-version
 pnpm install
 pnpm run build
 pnpm dsh web
@@ -44,9 +66,11 @@ pnpm dsh web
 
 `pnpm run build` 会准备仓库产物。`pnpm dsh web` 会直接使用这些已构建产物，不会重新构建。
 
+上面的命令不会加载策略层。如需启用，请按[策略部件的源码试用说明](packages/experimental/task-strategy/README.zh.md#use-this-package)加载附带的源码补丁；启动命令和配置细节以该节为准。[Gitee 镜像](https://gitee.com/chunyouzhidi/dsh-policy-version)包含相同的增强版源码。
+
 ## 社区与支持
 
-- 通过 [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions) 提交反馈或 bug 报告。
+- 策略增强版的问题请提交到[本 fork 的问题追踪器](https://github.com/sdaniasdsd/dsh-change/issues)；上游反馈请提交到 [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions)。
 - 为你的插件仓库添加 [`dsh-plugin`](https://github.com/topics/dsh-plugin) 话题，便于被发现。
 - 欢迎加入 DeepSeek Harness 企微群！扫描下方二维码填写入群问卷，小助手会定期发送入群邀请。
 

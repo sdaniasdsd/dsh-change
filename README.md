@@ -1,12 +1,34 @@
-# DeepSeek Harness
+# DeepSeek Harness — Policy Edition
 
 English | [中文](README.zh.md)
+
+This repository is an independently maintained experimental fork of DeepSeek Harness, not an official DeepSeek release. It adds an author-controlled task strategy layer above the original DSH execution layer. Source mirrors: [GitHub](https://github.com/sdaniasdsd/dsh-change) and [Gitee](https://gitee.com/chunyouzhidi/dsh-policy-version).
 
 DeepSeek Harness (`dsh`) is an open-source agent harness developed by [DeepSeek AI](https://deepseek.com).
 
 It is built on an **everything-is-a-plugin** architecture and powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://arxiv.org/abs/2608.25512).
 
-Documentation: [https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
+Upstream documentation: [https://deepseek-harness.github.io/deepseek-harness/](https://deepseek-harness.github.io/deepseek-harness/)
+
+## Policy edition: our changes
+
+The upper layer decides which tasks to dispatch, in what order, and with which capabilities; original DSH subagents perform the work. Authors define their preferred decision rules rather than replacing the model loop or turning each policy into a DSH plugin.
+
+- **Independent strategies:** named policies accept a task and author preferences and produce an execution plan. Authors can use JavaScript decision functions or configuration-based preference variants.
+- **Task flows and concurrency:** plans contain ordered stages. Tasks in the same stage can run concurrently within the configured per-run limit; later stages receive earlier results after the preceding stage finishes.
+- **Child capability selection:** each task selects an allowed original DSH preset, which supplies its plugin composition, and may restrict tools or select a model and provider. Preset selection does not grant additional filesystem or approval permissions.
+- **Original DSH execution:** the optional Cordis carrier connects the independent strategy component to existing subagents, presets, and Jobs. The original agent loop still executes child tasks and owns their resource cleanup.
+- **Progress and cancellation:** upper agents discover, preview, and dispatch plans through `task_strategy_list`, `task_strategy_plan`, and `task_strategy_run`. Existing `job_list`, `job_output`, and `job_kill` expose progress, completed child session identities, results, and cancellation.
+
+The strategy layer is opt-in: launching an unpatched profile retains the original composition. The example configuration provides `direct` and `cautious`; the latter runs two read-only inspections in parallel before implementation, while a `speed=fast` preference selects a shorter flow.
+
+This prototype is not a durable workflow engine: it has no global concurrency quota, automatic retries, pause/resume, or crash recovery. Children share working files, so concurrent writes need an author-chosen safe flow. Real model execution requires a configured model provider; the included integration tests use a scripted, keyless model adapter, not a live-model quality evaluation.
+
+Start reading here:
+
+- [Strategy usage, source map, and limitations](packages/experimental/task-strategy/README.md)
+- [Author preference and task-flow example](packages/experimental/task-strategy/cordis.source.patch.yml)
+- [Strategy subsystem and API reference](docs/subsystems/task-strategy.md)
 
 ## Developer preview
 
@@ -18,7 +40,7 @@ Review the [safety notice](SAFETY.md) before running the project.
 
 ### Run from `npm`
 
-Install `Node.js`, then run:
+This command runs the upstream npm release, not this fork's strategy enhancement. Install `Node.js`, then run:
 
 ```sh
 npx @deepseek-ai/dsh web
@@ -31,8 +53,8 @@ The command starts the Web UI at `http://127.0.0.1:3080` by default and opens it
 To run from a repository checkout:
 
 ```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
+git clone https://github.com/sdaniasdsd/dsh-change.git dsh-policy-version
+cd dsh-policy-version
 pnpm install
 pnpm run build
 pnpm dsh web
@@ -40,9 +62,11 @@ pnpm dsh web
 
 `pnpm run build` prepares the repository artifacts. `pnpm dsh web` uses those built artifacts without rebuilding.
 
+The command above launches without the strategy layer. To enable it, follow the [DSH source trial](packages/experimental/task-strategy/README.md#use-this-package) with the supplied source patch; that section owns the launch command and configuration details. The [Gitee mirror](https://gitee.com/chunyouzhidi/dsh-policy-version) contains the same enhanced source.
+
 ## Community and support
 
-- Submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
+- Report strategy-edition issues in [this fork's issue tracker](https://github.com/sdaniasdsd/dsh-change/issues); upstream feedback belongs in [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
 - Add the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic to your plugin repository for discoverability.
 - Join <a href="https://discord.gg/4MrtZUhpxg">DeepSeek Harness Discord community</a>.
 
