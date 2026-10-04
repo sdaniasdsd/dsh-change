@@ -1,0 +1,25 @@
+# Bilingual-pair consistency record for 2026-10-04-official-desktop-policy-upgrade-design.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/superpowers/specs/2026-10-04-official-desktop-policy-upgrade-design.md
+/official-desktop-and-task-strategy-upgrade-design:
+  en: 4c9b8e84d929a71a
+  zh: 97fee9817eac77f1
+/official-desktop-and-task-strategy-upgrade-design/goal:
+  en: 43ccbe730b538a74
+  zh: 65a6eae6cb8da4ae
+/official-desktop-and-task-strategy-upgrade-design/component-boundary:
+  en: 515686956abc973e
+  zh: c09558b2d875aec8
+/official-desktop-and-task-strategy-upgrade-design/migration-approach:
+  en: f34d46f2fd576435
+  zh: e0f83098c0e5d253
+/official-desktop-and-task-strategy-upgrade-design/desktop-integration-and-opt-in:
+  en: ca75e4a77839c4e7
+  zh: 47c9dac785898bc9
+/official-desktop-and-task-strategy-upgrade-design/build-and-acceptance:
+  en: 7bb3d321c0ed1e2e
+  zh: e1d819f1745b6ea5
+/official-desktop-and-task-strategy-upgrade-design/rollout-and-safeguards:
+  en: e6f0dc7a804a7d20
+  zh: fd68d76efb5692c2
