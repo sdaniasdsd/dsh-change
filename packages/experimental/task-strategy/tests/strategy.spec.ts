@@ -21,7 +21,7 @@ describe('StrategyRegistry', () => {
   it('passes and returns detached snapshots when deciding', async () => {
     const registry = new StrategyRegistry()
     const decision = plan(['implement'])
-    let received: { task: string; preferences: { speed: string } } | undefined
+    let received: { task: string; preferences?: Readonly<Record<string, string>> } | undefined
     registry.register({
       id: 'implement', description: 'Implement', decide(input) {
         received = input
@@ -81,7 +81,7 @@ describe('execution plans', () => {
 
   it('honors cancellation while a child executor is running', async () => {
     const controller = new AbortController()
-    const execution = executePlan(plan(['slow']), 'Do work', async (_step, _prompt, signal) => new Promise((resolve, reject) => {
+    const execution = executePlan(plan(['slow']), 'Do work', async (_step, _prompt, signal) => new Promise<never>((_resolve, reject) => {
       signal.addEventListener('abort', () => reject(signal.reason), { once: true })
     }), { maxConcurrent: 1, maxTasks: 1, maxResultBytes: 1024, signal: controller.signal })
     controller.abort(new Error('cancel requested'))

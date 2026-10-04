@@ -489,3 +489,7 @@ The account provider’s `embeddedPageDist` configuration adds a `dist` query pa
 ## Dev Note
 
 Pre-launch CDN and capacity decisions are tracked in the [Desktop update proposal](../../.agents/notes/proposed/feature/2026-09-08-desktop-update-policy-and-installation.md#cdn-and-capacity-qualification).
+
+### Isolated plugin migration candidate
+
+`pnpm --filter @deepseek-ai/dsh-desktop exec tsx scripts/migrate-plugin-profile.ts --source-profile <profile>` stages installed external plugins and the profile patch under `.desktop-build/<target>/candidate-profile`; it never replaces the active profile. The source `package.json`, patch, lockfile, and installed packages remain read-only. The generated `migration-report.json` records package versions, static core-peer compatibility, bundle order, and unavailable bundles without copying patch values into the report. Missing bundles are reported rather than downloaded or guessed. Install and launch only this candidate profile when validating a packaged build.

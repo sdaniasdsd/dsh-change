@@ -491,3 +491,7 @@ node apps/desktop/node_modules/pnpm/bin/pnpm.mjs --dir apps/desktop run test:upd
 ## 开发备注
 
 上线前 CDN 与容量决策见[桌面更新提案](../../.agents/notes/proposed/feature/2026-09-08-desktop-update-policy-and-installation.zh.md#cdn-and-capacity-qualification)。
+
+### 隔离的插件迁移候选版
+
+运行 `pnpm --filter @deepseek-ai/dsh-desktop exec tsx scripts/migrate-plugin-profile.ts --source-profile <profile>`，会将已安装的外部插件和 profile patch 放入 `.desktop-build/<target>/candidate-profile`，不会替换活动 profile。源 `package.json`、patch、锁文件和已安装插件保持只读。生成的 `migration-report.json` 记录包版本、静态核心 peer 兼容性、bundle 顺序和不可用 bundle，不会把 patch 配置值复制到报告中。缺失的 bundle 只报告、不下载也不猜测。验证打包版本时，只安装并启动这个候选 profile。
