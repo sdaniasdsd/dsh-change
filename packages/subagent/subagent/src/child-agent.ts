@@ -140,9 +140,10 @@ export function childSessionMeta(
   parent: Agent,
   childDepth: number,
   isSeeded: boolean,
+  requestedAgentPreset?: string,
 ): NonNullable<CreateAgentOptions['meta']> {
   const parentHeader = parent.session.header
-  const agentPreset = parent.ctx.get('agentPresets')?.composedPreset(parent.ctx)
+  const agentPreset = requestedAgentPreset ?? parent.ctx.get('agentPresets')?.composedPreset(parent.ctx)
   return {
     ...parentHeader.cwd !== undefined ? { cwd: parentHeader.cwd } : {},
     ...agentPreset === undefined ? {} : { agentPreset },
@@ -158,6 +159,8 @@ export function childSessionMeta(
 
 /** The scoped composition a child agent's creation window applies. */
 export interface ChildComposition {
+  /** Explicit one-shot preset override; omitted children inherit the parent's exact preset revision. */
+  readonly agentPreset?: string | undefined
   /** Per-child persona shadowing the deployment persona. */
   readonly persona?: string | undefined
   /** Per-child tool scoping. */
@@ -197,12 +200,18 @@ export const SUBAGENT_DELEGATION_CONTEXT
  * @param parent - the delegating parent whose composition the child joins.
  * @param composition - the per-child persona and tool filter to install.
  */
-export function applyChildComposition(
+export async function applyChildComposition(
   childCtx: Context,
   parent: Agent,
   composition: ChildComposition,
-): void {
-  childCtx.get('agentPresets')?.composeFrom(childCtx, parent.ctx)
+): Promise<void> {
+  const agentPresets = childCtx.get('agentPresets')
+  if (composition.agentPreset === undefined) {
+    agentPresets?.composeFrom(childCtx, parent.ctx)
+  } else {
+    if (agentPresets === undefined) throw new Error('One-shot agent preset selection requires the agent preset registry')
+    await agentPresets.mount(childCtx, composition.agentPreset)
+  }
   childCtx.systemPrompt.context({
     name: 'subagent:delegation',
     order: childCtx.systemPrompt.getContextOrder('SUBAGENT_DELEGATION'),

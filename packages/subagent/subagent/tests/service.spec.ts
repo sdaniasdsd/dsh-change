@@ -25,7 +25,14 @@ function fakeParent(id = 'parent-1'): Agent {
   return { id: SessionId(id) } as unknown as Agent
 }
 
-const ALL_CAPS: SubagentCapabilities = { agentOptions: true, outputSchema: true, depthLimit: true, toolFilter: true, persona: true }
+const ALL_CAPS: SubagentCapabilities = {
+  agentOptions: true,
+  outputSchema: true,
+  depthLimit: true,
+  toolFilter: true,
+  persona: true,
+  agentPreset: true,
+}
 const NO_CAPS: SubagentCapabilities = { agentOptions: false, outputSchema: false, depthLimit: false, toolFilter: false, persona: false }
 
 function baseRequest(overrides: Partial<SubagentStartRequest> = {}): SubagentStartRequest {
@@ -189,6 +196,7 @@ describe('SubagentRuntime', () => {
     ['depthLimit', { maxDepth: 1 }],
     ['toolFilter', { toolFilter: { deny: ['bash'] } }],
     ['persona', { persona: 'reviewer' }],
+    ['agentPreset', { agentPreset: 'reviewer' }],
   ] as const)('rejects unsupported %s before provider startup', async (_capability, override) => {
     const { subagents } = await service()
     const provider = new StubProvider('weak', NO_CAPS)
@@ -196,6 +204,14 @@ describe('SubagentRuntime', () => {
     await expect(subagents.start('weak', baseRequest(override)))
       .rejects.toMatchObject({ code: 'UNSUPPORTED_CAPABILITY' })
     expect(provider.startCount).toBe(0)
+  })
+
+  it('passes a supported one-shot agent preset through to the provider', async () => {
+    const { subagents } = await service()
+    const provider = new StubProvider('preset-aware')
+    subagents.registerProvider(provider)
+    await subagents.start('preset-aware', baseRequest({ agentPreset: 'reviewer' }))
+    expect(provider.lastRequest?.agentPreset).toBe('reviewer')
   })
 
   it('validates depth and schema semantics before provider startup', async () => {

@@ -125,7 +125,8 @@ export interface SubagentRunEndInfo {
  * continuable children are composed by the continuation manager itself and are
  * gated by {@link SubagentProvider.prepareContinuable} instead. Each flag
  * corresponds one-to-one to a {@link SubagentStartRequest} option: `depthLimit`
- * to `maxDepth`; the other names match.
+ * to `maxDepth`; the other names match. `agentPreset` is optional for backwards compatibility;
+ * absence means the provider does not support preset selection.
  */
 export interface SubagentCapabilities {
   readonly agentOptions: boolean
@@ -133,6 +134,7 @@ export interface SubagentCapabilities {
   readonly depthLimit: boolean
   readonly toolFilter: boolean
   readonly persona: boolean
+  readonly agentPreset?: boolean
 }
 
 /**
@@ -145,6 +147,8 @@ export interface SubagentCapabilities {
 export interface SubagentStartRequest {
   /** Optional short display label persisted with a session-backed child. */
   readonly label?: string
+  /** Optional original DSH agent-preset composition to mount before the child's first turn. */
+  readonly agentPreset?: string
   /** Content delivered as the child's user message. */
   readonly prompt: ContentBlock[]
   /**

@@ -54,12 +54,13 @@ async function setupPresetHost(): Promise<{ ctx: Context; adapter: MockAdapter; 
 }
 
 /** The one-shot spawn request shape both in-process providers build. */
-function spawnRequest(parent: Agent) {
+function spawnRequest(parent: Agent, agentPreset?: string) {
   return {
     label: 'child task',
     prompt: [{ type: 'text' as const, text: 'child task' }],
     parent,
     signal: new AbortController().signal,
+    ...(agentPreset === undefined ? {} : { agentPreset }),
     descriptor: snapshotSubagentDescriptor({
       mode: 'one-shot' as const,
       provider: 'spawn',
@@ -102,6 +103,17 @@ describe('a child agent composed in-process', () => {
     // Without this the child's own history reads back under the deployment
     // default, which is a different tool set than the one it actually used.
     expect(run.localAgent?.session.header.agentPreset).toBe('coding')
+    await run.dispose()
+  })
+
+  it('applies an explicitly requested preset before the child first turn', async () => {
+    const { ctx, adapter, parent } = await setupPresetHost()
+    const run = await startInProcessRun(spawnRequest(parent, 'reviewing'), {})
+    await run.result
+
+    expect(ctx.tools.schemas(run.localAgent).map(schema => schema.name)).toEqual(['reviewing_only'])
+    expect(run.localAgent?.session.header.agentPreset).toBe('reviewing')
+    expect(adapter.requests.at(-1)?.tools?.map(tool => tool.name)).toEqual(['reviewing_only'])
     await run.dispose()
   })
 
