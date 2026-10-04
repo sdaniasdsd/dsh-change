@@ -28,7 +28,8 @@ import { tarballFiles } from '../../../scripts/release/tarball.ts'
 import { resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
 
 const DSH_PACKAGE = '@deepseek-ai/dsh'
-const ROOT_PACKAGES = [DSH_PACKAGE, DESKTOP_HOST_PACKAGE] as const
+const STRATEGY_PACKAGE = '@deepseek-ai/dsh-experimental-task-strategy'
+const ROOT_PACKAGES = [DSH_PACKAGE, DESKTOP_HOST_PACKAGE, STRATEGY_PACKAGE] as const
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const REPOSITORY_ROOT = resolve(APP_ROOT, '..', '..')
 

@@ -5,15 +5,17 @@ import {
   type PackedDesktopPackage,
 } from '../scripts/prepare-package-set.ts'
 
+const STRATEGY = '@deepseek-ai/dsh-experimental-task-strategy'
+
 function packed(name: string, manifest: Record<string, unknown> = {}): PackedDesktopPackage {
   return { tarball: `${name}.tgz`, manifest: { name, version: '1.0.0', ...manifest } }
 }
 
-describe('desktop package-set selection', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs()
-  })
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
+describe('desktop package-set selection', () => {
   it('does not select a packaging target when imported as a library', async () => {
     vi.stubEnv('DSH_DESKTOP_TARGET_PLATFORM', 'linux')
     vi.stubEnv('DSH_DESKTOP_TARGET_ARCH', 'x64')
@@ -27,6 +29,7 @@ describe('desktop package-set selection', () => {
         dependencies: { '@deepseek-ai/dsh-base': '^1.0.0', external: '^2.0.0' },
         optionalDependencies: { '@deepseek-ai/platform-package': '1.0.0', '@deepseek-ai/missing-platform': '1.0.0' },
       })],
+      [STRATEGY, packed(STRATEGY)],
       ['@deepseek-ai/dsh-desktop-host', packed('@deepseek-ai/dsh-desktop-host', {
         dependencies: { '@deepseek-ai/dsh': '^1.0.0' },
       })],
@@ -42,6 +45,7 @@ describe('desktop package-set selection', () => {
       '@deepseek-ai/dsh',
       '@deepseek-ai/dsh-base',
       '@deepseek-ai/dsh-desktop-host',
+      STRATEGY,
       '@deepseek-ai/platform-package',
     ])
   })
@@ -56,10 +60,12 @@ describe('desktop package-set selection', () => {
       ['@deepseek-ai/dsh-desktop-host', packed('@deepseek-ai/dsh-desktop-host', {
         dependencies: { '@deepseek-ai/dsh': '^1.0.0' },
       })],
+      [STRATEGY, packed(STRATEGY)],
     ])
     expect(() => selectDesktopPackageClosure(available)).toThrow(/unpacked package/u)
     expect(() => selectDesktopPackageClosure(new Map([
       ['@deepseek-ai/dsh', packed('@deepseek-ai/dsh')],
+      [STRATEGY, packed(STRATEGY)],
     ]))).toThrow(/omit @deepseek-ai\/dsh-desktop-host/u)
   })
 
@@ -72,9 +78,10 @@ describe('desktop package-set selection', () => {
         },
       })],
       ['@deepseek-ai/dsh-desktop-host', packed('@deepseek-ai/dsh-desktop-host')],
+      [STRATEGY, packed(STRATEGY)],
     ])
     expect(selectDesktopPackageClosure(available).map(entry => entry.manifest.name)).toEqual([
-      '@deepseek-ai/dsh', '@deepseek-ai/dsh-desktop-host',
+      '@deepseek-ai/dsh', '@deepseek-ai/dsh-desktop-host', STRATEGY,
     ])
   })
 
@@ -90,5 +97,24 @@ describe('desktop package-set selection', () => {
       assertDesktopHostPackageFiles(files.slice(1))
     }).toThrow(/lib\/index\.js/u)
     expect(() => { assertDesktopHostPackageFiles(files.slice(0, 1)) }).toThrow(/lib\/cli\.js/u)
+  })
+
+  it('fails with the local dependency identity when its tarball is missing', () => {
+    const inputs = new Map([
+      ['@deepseek-ai/dsh', packed('@deepseek-ai/dsh')],
+      ['@deepseek-ai/dsh-desktop-host', packed('@deepseek-ai/dsh-desktop-host')],
+      [STRATEGY, packed(STRATEGY, { dependencies: { '@deepseek-ai/dsh-base': 'workspace:*' } })],
+    ])
+    expect(() => selectDesktopPackageClosure(inputs)).toThrow(
+      /@deepseek-ai\/dsh-experimental-task-strategy requires unpacked package @deepseek-ai\/dsh-base/u,
+    )
+  })
+
+  it('fails with the package identity when the strategy tarball is missing', () => {
+    const inputs = new Map([
+      ['@deepseek-ai/dsh', packed('@deepseek-ai/dsh')],
+      ['@deepseek-ai/dsh-desktop-host', packed('@deepseek-ai/dsh-desktop-host')],
+    ])
+    expect(() => selectDesktopPackageClosure(inputs)).toThrow(/omit @deepseek-ai\/dsh-experimental-task-strategy/u)
   })
 })
