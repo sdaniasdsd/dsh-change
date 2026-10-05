@@ -199,7 +199,7 @@
 | 18 | TUMIX: Multi-Agent Test-Time Scaling with Tool-Use Mixture | 2025-10（页面未明示 venue） | https://arxiv.org/abs/2510.01279 | VERIFIED（背景） |
 | 19 | Model Context Protocol (MCP): Landscape, Security Threats, and Future Research Directions | 2025-03 | https://arxiv.org/abs/2503.23278 | VERIFIED（背景） |
 | 20 | VIPER-MCP: Detecting and Exploiting Taint-Style Vulnerabilities in Model Context Protocol Servers | 2026-05 | https://arxiv.org/abs/2605.21392 | 已降级至 §6（未核验，不再作为 §0–§5 依据） |
-| 21 | PARSE: Provenance-Aware Retrieval Sanitization for Professional Domain LLM Agents | 2026-06 | https://arxiv.org/abs/2606.17467 | VERIFIED（EMNLP 2026 workshop） |
+| 21 | PARSE (arXiv:2606.17467) | 2026-06 | https://arxiv.org/abs/2606.17467 | VERIFIED（EMNLP 2026 workshop） |
 | 22 | Untrusted Content Masking for Web Agents with Security Guarantees | 2026-07 | https://arxiv.org/abs/2607.05277 | VERIFIED |
 | 23 | Spawn Freely, Act Sparingly: Progressive Risk Vesting for Recursive LLM-Agent Trees | 2026-09 | https://arxiv.org/abs/2609.01035 | VERIFIED（理论+合成） |
 | 24 | Coding Agents Have Converged: Why the SWE-bench Leaderboard Can No Longer Order Its Top Entries, and What to Measure Instead | 2026-09 | https://arxiv.org/abs/2609.17394 | VERIFIED |

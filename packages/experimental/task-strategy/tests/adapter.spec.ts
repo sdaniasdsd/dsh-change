@@ -31,7 +31,10 @@ afterEach(async () => {
   for (const directory of directories.splice(0)) await rm(directory, { recursive: true, force: true })
 })
 
-async function boot(script: ConstructorParameters<typeof MockAdapter>[0] = [textResponse('risks found'), textResponse('implemented')]) {
+async function boot(
+  script: ConstructorParameters<typeof MockAdapter>[0] = [textResponse('risks found'), textResponse('implemented')],
+  configureModel?: (model: MockAdapter) => void,
+) {
   const ctx = new Context()
   contexts.push(ctx)
   const directory = await mkdtemp(join(tmpdir(), 'dsh-task-strategy-'))
@@ -47,6 +50,7 @@ async function boot(script: ConstructorParameters<typeof MockAdapter>[0] = [text
   await ctx.loader.create({ name: 'cordis:include', config: { path: './cordis.yml' } })
   await ctx.loader.await()
   const model = new MockAdapter(script)
+  configureModel?.(model)
   ctx.llm.registerAdapter(['mock'], model)
   const handle = await ctx.agents.create({
     sessionId: SessionId('strategy-parent'), agentOptions: { provider: 'mock', model: 'mock' },
@@ -130,15 +134,76 @@ describe('Loader-composed strategy adapter', () => {
     expect(ctx.jobs.list(parent.id)).toEqual([])
   })
 
-  it('drains active children when the adapter unloads', async () => {
-    const { ctx, parent } = await boot(['hang'])
+  it('keeps accepted jobs alive when the strategy adapter unloads', async () => {
+    let requestStarted!: () => void
+    const started = new Promise<void>((resolve) => { requestStarted = resolve })
+    let childSignal: AbortSignal | undefined
+    const { ctx, parent } = await boot(['hang'], (model) => {
+      const stream = model.stream.bind(model)
+      model.stream = async function* (options) {
+        childSignal = options.signal
+        requestStarted()
+        yield* stream(options)
+      }
+    })
     const plan = await ctx.taskStrategies.decide('review-first', { task: 'task' })
     const jobId = await ctx.taskStrategies.start(parent, 'task', plan, new AbortController().signal)
+    await started
     await [...ctx.loader.entries()].find(entry => entry.options.id === 'task-strategy')!.fiber!.dispose()
-    expect((await ctx.jobs.wait(jobId, 5000, parent.id)).status).toBe('killed')
-    expect(ctx.agents.list().map(agent => agent.id)).toEqual(['strategy-parent'])
     expect(ctx.tools.schemas(parent).map(tool => tool.name)).not.toContain('task_strategy_run')
-  })
+    expect(childSignal!.aborted).toBe(false)
+    expect(ctx.jobs.list(parent.id)).toEqual([expect.objectContaining({ id: jobId, status: 'running' })])
+  }, 30_000)
+
+  it('keeps accepted jobs cancellable after the strategy adapter unloads', async () => {
+    let requestStarted!: () => void
+    const started = new Promise<void>((resolve) => { requestStarted = resolve })
+    let childSignal: AbortSignal | undefined
+    const { ctx, parent } = await boot(['hang'], (model) => {
+      const stream = model.stream.bind(model)
+      model.stream = async function* (options) {
+        childSignal = options.signal
+        requestStarted()
+        yield* stream(options)
+      }
+    })
+    const plan = await ctx.taskStrategies.decide('review-first', { task: 'task' })
+    const jobId = await ctx.taskStrategies.start(parent, 'task', plan, new AbortController().signal)
+    await started
+    await [...ctx.loader.entries()].find(entry => entry.options.id === 'task-strategy')!.fiber!.dispose()
+    expect(childSignal!.aborted).toBe(false)
+    expect(ctx.jobs.kill(jobId, parent.id, 'cancelled by the user')).toBe('requested')
+    expect((await ctx.jobs.wait(jobId, 5000, parent.id)).status).toBe('killed')
+    expect(childSignal!.aborted).toBe(true)
+    expect(ctx.agents.list().map(agent => agent.id)).toEqual(['strategy-parent'])
+  }, 30_000)
+
+  it('rejects admission when the adapter unloads during preflight', async () => {
+    const { ctx, parent } = await boot()
+    const plan = await ctx.taskStrategies.decide('review-first', { task: 'task' })
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    let entered!: () => void
+    const preflightEntered = new Promise<void>((resolve) => { entered = resolve })
+    const resolvePreset = ctx.agentPresets.resolve.bind(ctx.agentPresets)
+    ctx.agentPresets.resolve = async (name) => {
+      entered()
+      await gate
+      return resolvePreset(name)
+    }
+    try {
+      const pending = ctx.taskStrategies.start(parent, 'task', plan, new AbortController().signal)
+      await preflightEntered
+      await [...ctx.loader.entries()].find(entry => entry.options.id === 'task-strategy')!.fiber!.dispose()
+      release()
+      await expect(pending).rejects.toThrow('Strategy component is closing')
+      expect(ctx.jobs.list(parent.id)).toEqual([])
+      expect(ctx.agents.list().map(agent => agent.id)).toEqual(['strategy-parent'])
+    } finally {
+      release()
+      ctx.agentPresets.resolve = resolvePreset
+    }
+  }, 30_000)
 
   it.each([{}, { allow: ['unknown'] }, { deny: ['run_code'] }])('rejects invalid later-stage filters before starting work: %j', async (tools) => {
     const { ctx, model, parent } = await boot()

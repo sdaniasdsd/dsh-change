@@ -1,0 +1,22 @@
+# Bilingual-pair consistency record for 2026-10-05-task-strategy-job-lifetime.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/implemented/architecture/2026-10-05-task-strategy-job-lifetime.md
+/agent-note-jobs-own-accepted-task-strategy-run-lifetime:
+  en: 138ea7b581982138
+  zh: 79b389cedf53969e
+/agent-note-jobs-own-accepted-task-strategy-run-lifetime/problem:
+  en: 62bffe02633b3f68
+  zh: 6840abec3ded8cd1
+/agent-note-jobs-own-accepted-task-strategy-run-lifetime/decision:
+  en: d4f833b8e1159b53
+  zh: e0c236ef3953b7ad
+/agent-note-jobs-own-accepted-task-strategy-run-lifetime/alternatives-considered:
+  en: 865119001b839ec9
+  zh: 2605dac52fec298d
+/agent-note-jobs-own-accepted-task-strategy-run-lifetime/consequences:
+  en: 6ebc884c6fac1200
+  zh: 5fcfac34b0aeb609
+/agent-note-jobs-own-accepted-task-strategy-run-lifetime/testing:
+  en: 39779262cb1fc5d9
+  zh: 1c7be23a023631a1

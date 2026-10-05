@@ -49,7 +49,9 @@ The separate carrier provides `ctx.taskStrategies`: `register`, `list`, `catalog
 <details>
 <summary>Implementation internals — click to expand</summary>
 
-The registry decides without loading plugins. The executor imposes stage barriers, concurrency, task-count and result-byte bounds, and passes labelled prior-stage outputs as data. The carrier preflights provider capabilities and preset availability before starting a job. Original in-process DSH drivers mount the chosen preset during unpublished child setup; child permission delegation, model loop, settlement, and cleanup remain original. A failed child stops admissions and cancels siblings; the stage drains before terminal settlement. Adapter unload cancels and drains active runs. Existing subsystem invariants cover original Agent, subagent, preset, tool, and Job ownership; this library has no independently registered invariant.
+The registry decides without loading plugins. The executor imposes stage barriers, concurrency, task-count and result-byte bounds, and passes labelled prior-stage outputs as data. The carrier preflights provider capabilities and preset availability before starting a job. Original in-process DSH drivers mount the chosen preset during unpublished child setup; child permission delegation, model loop, settlement, and cleanup remain original. A failed child stops admissions and cancels siblings; the stage drains before terminal settlement. Carrier unload removes strategy registrations and tools but does not cancel or wait for Jobs already accepted. Each accepted job keeps its captured plan and limits and remains cancellable through `job_kill`, owner disposal, or Jobs-backend shutdown. Existing subsystem invariants cover original Agent, subagent, preset, tool, and Job ownership; this library has no independently registered invariant.
+
+See the [accepted Job lifetime decision](../../../.agents/notes/implemented/architecture/2026-10-05-task-strategy-job-lifetime.md) for the lifecycle rationale and boundaries.
 
 | File | Role |
 |---|---|

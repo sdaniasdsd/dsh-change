@@ -23,7 +23,6 @@ export default class TaskStrategies extends Service {
   static inject = ['agents', 'tools', 'subagents', 'agentPresets', 'jobs']
   static Config = adapterSchema
   private readonly registry = new StrategyRegistry()
-  private readonly active = new Map<AbortController, Promise<JobOutcome>>()
   private closing = false
   private readonly config: AdapterConfig
 
@@ -36,11 +35,8 @@ export default class TaskStrategies extends Service {
       }
     }
     if (!config.toolPrefix.trim() || !config.provider.trim()) throw new Error('Strategy carrier names must not be empty')
-    ctx.effect(() => async () => {
-      this.closing = true
-      for (const controller of this.active.keys()) controller.abort(new Error('strategy component unloaded'))
-      await Promise.all(this.active.values())
-    })
+    // The carrier owns admission and registrations; Jobs owns accepted run lifetime.
+    ctx.effect(() => () => { this.closing = true }, 'task strategy admission')
     for (const definition of config.strategies) {
       const captured = structuredClone(definition)
       this.register({
@@ -144,12 +140,18 @@ export default class TaskStrategies extends Service {
     const captured = structuredClone(plan)
     const subagents = this.ctx.subagents
     const jobs = this.ctx.jobs
-    const config = this.config
+    const runConfig = Object.freeze({
+      provider: this.config.provider,
+      maxConcurrent: this.config.maxConcurrent,
+      maxTasks: this.config.maxTasks,
+      maxResultBytes: this.config.maxResultBytes,
+      maxOutputBytes: this.config.maxOutputBytes,
+    })
     await this.preflight(captured)
     signal.throwIfAborted()
     if (this.closing) throw new Error('Strategy component is closing')
     const execute: TaskExecutor = async (step, prompt, childSignal) => {
-      const run = await subagents.start(config.provider, {
+      const run = await subagents.start(runConfig.provider, {
         parent, prompt: [{ type: 'text', text: prompt }], signal: childSignal,
         label: step.label, agentPreset: step.preset,
         ...step.tools === undefined ? {} : { toolFilter: {
@@ -168,12 +170,12 @@ export default class TaskStrategies extends Service {
       } finally { await run.dispose() }
     }
     return jobs.start({
-      kind: 'strategy', label: captured.name, owner: parent.id, outputLimitBytes: config.maxOutputBytes,
+      kind: 'strategy', label: captured.name, owner: parent.id, outputLimitBytes: runConfig.maxOutputBytes,
       run: (job) => {
         const controller = new AbortController()
         job.append(`Execution plan: ${JSON.stringify(captured)}\n`, { channel: 'log' })
         const done = executePlan(captured, task, execute, {
-          maxConcurrent: config.maxConcurrent, maxTasks: config.maxTasks, maxResultBytes: config.maxResultBytes,
+          maxConcurrent: runConfig.maxConcurrent, maxTasks: runConfig.maxTasks, maxResultBytes: runConfig.maxResultBytes,
           signal: controller.signal,
           onEvent: (event) => {
             if (event.type === 'stage') job.updateProgress(event.stage)
@@ -181,11 +183,9 @@ export default class TaskStrategies extends Service {
           },
         }).then((result): JobOutcome => ({
           status: result.status === 'cancelled' ? 'killed' : result.status,
-          ...result.error === undefined ? {} : { detail: boundText(result.error, config.maxOutputBytes) },
-          result: boundText(JSON.stringify(result), config.maxOutputBytes),
-        }), (error: unknown): JobOutcome => ({ status: 'failed', detail: boundText(String(error), config.maxOutputBytes) }))
-        this.active.set(controller, done)
-        void done.then(() => { this.active.delete(controller) })
+          ...result.error === undefined ? {} : { detail: boundText(result.error, runConfig.maxOutputBytes) },
+          result: boundText(JSON.stringify(result), runConfig.maxOutputBytes),
+        }), (error: unknown): JobOutcome => ({ status: 'failed', detail: boundText(String(error), runConfig.maxOutputBytes) }))
         return { cancel: (reason) => { controller.abort(new Error(reason ?? 'strategy job cancelled')) }, done }
       },
     })
