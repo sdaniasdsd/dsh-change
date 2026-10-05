@@ -1,0 +1,282 @@
+# Task Strategy Pack — 追加到 profile 的 cordis.patch.yml（顶层数组的一个 insert 项）
+# 载体：@deepseek-ai/dsh-experimental-task-strategy
+# 详见本目录 README.md（含实测踩坑记录：浏览器串行、pwsh 写文件禁令、maxResultBytes 等）
+- insert:
+    - id: experimental-task-strategy
+      name: '@deepseek-ai/dsh-experimental-task-strategy/cordis'
+      config:
+        allowedPresets: [ standard ]
+        maxResultBytes: 262144
+        maxOutputBytes: 49152
+        strategies:
+          - id: verified-delivery
+            description: >-
+              交付前先取证、再对抗性验证：ground(取证 + 验收标准) → produce(交付物 + 反证协议) → attack(正确性
+              / 边界，只读) → repair(只修被证实的缺陷)，共 7 个子任务。 适用于"改代码、出文档、给结论"这类必须自证的任务；
+              小改动走快车道 verified-delivery-quick。
+            plan:
+              name: verified-delivery
+              stages:
+                - name: ground
+                  tasks:
+                    - label: ground-truth
+                      preset: standard
+                      tools:
+                        deny: [ write, edit ]
+                      instruction: |-
+                        你是取证者。不要修改任何文件，也不要用 pwsh / 任何命令写文件（`tools.deny` 只挡 write/edit，挡不住 shell 重定向）。
+                        只回答一个问题的客观事实：为了完成上面的 Task，现在的真实状态是什么？
+                        必须给可复核的证据：文件路径+行号、命令+实际输出、或配置项原文；禁止凭印象概括。
+                        输出（≤40 行，纯文本，不要客套）：
+                        1) 事实：每条一行，格式 `- [证据] 结论`；证据写成 path:line 或 `命令` → 关键输出。
+                        2) 未知：你无法确认、但会影响做法的事项，各一行。
+                        3) 陷阱：会让做法失败的约束（平台差异、编码、权限、既有约定、生成物被覆盖等）。
+                    - label: acceptance-criteria
+                      preset: standard
+                      tools:
+                        deny: [ write, edit ]
+                      instruction: |-
+                        你是验收标准的制定者。不要修改任何文件，也不要用 pwsh / 任何命令写文件（`tools.deny` 只挡 write/edit，挡不住 shell 重定向）。
+                        把上面的 Task 变成一组可证伪的验收项：每一项都能用一条命令或一次观察判定真/假。
+                        输出（≤30 行）：
+                        1) 验收清单：5-12 条，格式 `N. <可观察的判定> | 检查方式：<命令或观察点> | 期望：<具体结果>`。
+                           禁止"可用/合理/完善/正确"这类不可判定的措辞。
+                        2) 必须沿用的既有约定：仓库或文档里已存在、交付物必须遵守的写法（给 path:line）。
+                        3) 最危险的假设：一旦它错了整个交付物就错了，一行写清。
+                - name: produce
+                  tasks:
+                    - label: deliverable
+                      preset: standard
+                      instruction: |-
+                        你是交付者。现在真正把 Task 做完；上面的取证结论是事实，直接采信，不要从零重查。
+                        要求：
+                        - 先按"验收清单"确认验收面再动手；沿用仓库既有约定，不引入新机制除非证据要求。
+                        - 完成后自己走一遍验收清单，能自验的必须自验；禁止把未验证的东西说成已完成。
+                        - 不要顺手扩大范围。
+                        输出（≤40 行）：
+                        1) 交付物：改动/新增文件的绝对路径，一行一个，各附一句说明。
+                        2) 自检：逐条对应验收清单，写 PASS/FAIL/未验证，并附你实际运行的命令与输出要点。
+                        3) 未做与取舍：明确列出没做的事及原因，不要隐藏。
+                    - label: falsification-protocol
+                      preset: standard
+                      tools:
+                        deny: [ write, edit ]
+                      instruction: |-
+                        你是验证方案的设计者，不是执行者。不要修改任何文件，也不要用 pwsh / 任何命令写文件，也不要去检查"交付物"本身（保持独立）。
+                        只依据 stage 1 的取证与验收清单，为每一条验收项设计最小反证动作。
+                        输出（≤40 行）：
+                        1) 每条验收项一行：`N. 反证命令/观察 → 期望输出 → 判定阈值`。
+                           必须最小、可复现、不靠猜测；能用退出码或精确字符串判定的一律用精确字符串。
+                        2) 交付物中最容易自欺或造假的点：逐条给出具体反证方法。
+                        3) 需要交叉验证的外部事实（版本、API、规范）：给出取证方式。
+                - name: attack
+                  tasks:
+                    - label: verify-correctness
+                      preset: standard
+                      tools:
+                        deny: [ write, edit ]
+                      instruction: |-
+                        你是对抗性验证者。默认交付物是错的，除非证据证明它对。
+                        只读：不要修改，也不要"顺手修一下"；更不要用 pwsh / 任何命令写文件。
+                        照着 stage 2 的反证协议自己重新执行每一项检查，不要相信交付者的自检结论。
+                        输出（≤50 行）：
+                        1) 逐条判定：`N. PASS/FAIL/UNVERIFIED — 证据：<命令> → <实际输出要点>`；
+                           UNVERIFIED 必须写清缺什么条件。
+                        2) 证据不足的声明：把交付物里说得比证据更满的话逐条摘录，并说明为什么不成立。
+                        3) 结论：能否交付；不能则给出最小失败复现步骤。
+                    - label: verify-edges
+                      preset: standard
+                      tools:
+                        deny: [ write, edit ]
+                      instruction: |-
+                        你是边界攻击者。目标是找出交付物在真实环境下会坏掉的地方，而不是复述它的功能。
+                        只读：不要修改任何文件，也不要用 pwsh / 任何命令写文件。
+                        攻击面（按需取舍，做过什么写什么，不许罗列没做过的事）：
+                        - 空/超大/畸形输入；路径含空格或中文；Windows 路径与 PowerShell 语义；编码与换行。
+                        - 重复执行、并发执行、部分失败后重跑；生成物被覆盖或残留。
+                        - 未在验收清单里、但会消费该交付物的下游（调用方、脚本、文档引用）。
+                        每个缺陷给出最小复现：
+                        `DEFECT n: 症状 | 复现：<确切命令/输入> | 实际：<> | 期望：<> | 影响：高/中/低`
+                        若确实没发现缺陷，明确写"未发现"并列出你实际做过的攻击。
+                - name: repair
+                  tasks:
+                    - label: certified-repair
+                      preset: standard
+                      instruction: |-
+                        你是修复者。只修 stage 3 中被证据证实的缺陷（DEFECT / FAIL），
+                        不要重构、不要扩大范围、不要"顺便优化"。
+                        对每个缺陷：先复现，再改，再用同一检查复验。
+                        输出（≤40 行）：
+                        1) 修复：`DEFECT n → 改动文件 → 复现命令 → 修复后输出`。
+                        2) 不修：逐条写明原因（证据不足 / 超出范围 / 属于设计取舍）。
+                        3) 残余风险：一行一条，说明什么情况下这个交付物仍会出问题。
+          - id: verified-delivery-quick
+            description: >-
+              verified-delivery 的快车道：produce(直接产出并自检) → verify(独立只读验证)， 共 2
+              个子任务。用于小改动、低风险、只想快速拿到"做完 + 被独立验证"结论的场合； 要交付给别人或高风险的结果请用
+              verified-delivery。
+            plan:
+              name: verified-delivery-quick
+              stages:
+                - name: produce
+                  tasks:
+                    - label: deliverable-quick
+                      preset: standard
+                      instruction: |-
+                        直接完成上面的 Task。沿用仓库既有约定，不扩大范围。
+                        输出（≤30 行）：1) 交付物与文件路径；2) 你实际运行过的验证命令与结果；
+                        3) 没做的事与原因。禁止把未验证的内容说成已完成。
+                - name: verify
+                  tasks:
+                    - label: verify-quick
+                      preset: standard
+                      tools:
+                        deny: [ write, edit ]
+                      instruction: |-
+                        独立验证 deliverable-quick 的产出：默认它是错的，除非证据证明它对。
+                        只读：不要修改任何文件，也不要用 pwsh / 任何命令写文件。
+                        输出（≤30 行）：
+                        1) 逐条判定 `PASS/FAIL/UNVERIFIED — 证据：<命令> → <实际输出>`。
+                        2) 证据不足或夸大的声明，逐条摘录。
+                        3) 能否交付；不能则给最小失败复现。
+          - id: frontier-survey
+            description: >-
+              论文/技术前沿调研（面向 web 证据）：scan(代表工作 / 方向归纳 / 反证) →
+              source-verify(逐条开页面核验 + 新颖性查重) → synthesize(写报告) →
+              citation-audit(逐条链接复核) → repair(只修被证实的引用问题)，共 7 个子任务。 环境适配：本环境
+              web_fetch 被 DNS 拦截不可用，核验一律走 Tabbit 浏览器； 浏览器阶段串行（每阶段 1
+              个子任务），避免多个子任务抢同一个浏览器实例。 关键设计：只认"真的用浏览器打开过并核对过标题"的条目，未核验条目不得进正文；
+              写文件只发生在 synthesize/repair，其余阶段 tools.deny=[write, edit]。
+            plan:
+              name: frontier-survey
+              stages:
+                - name: scan
+                  tasks:
+                    - label: landscape-scan
+                      preset: standard
+                      tools:
+                        deny: [ write, edit ]
+                      instruction: |-
+                        你是检索者，任务是找"当下真正前沿"的工作，不是复述经典。不要修改任何文件，也不要用 pwsh / 任何命令写文件（`tools.deny` 只挡 write/edit，挡不住 shell 重定向）。
+                        环境事实：web_fetch 在本环境不可用（DNS 拦截，报 `URL hostname ... resolves to a non-public IP
+                        address`），本阶段不要尝试 web_fetch，也不要开浏览器（留给后面的核验阶段）。
+                        只用 web_search，多角度换词检索（换关键词 / 换 venue / 换时间词 / 换作者）。
+                        时间窗：2025-09 至 2026-10（今天是 2026-10-05）。优先 arXiv / OpenReview / 顶会官网。
+                        输出（≤45 行）：15-20 条候选，每条一行：
+                        `编号 | 标题（英文原文） | 机构/作者 | 时间(YYYY-MM) | 链接 | 一句话贡献 | 为什么算前沿`
+                        硬要求：
+                        - 全部标注为"索引级（未核验）"，核验由下一阶段用浏览器完成，你不需要也不许假装核验过。
+                        - 不许凭记忆补全标题、作者或链接；搜索没给出的字段写"未知"。
+                        - 遇到 ezproxy / ar5iv / sinoxiv / semanticscholar 等镜像链接，保留原链接但另注明
+                          "疑似 arXiv ID = <编号>"（若能从 URL 或标题推断），供核验阶段回落官方站。
+                    - label: theme-scout
+                      preset: standard
+                      tools:
+                        deny: [ write, edit ]
+                      instruction: |-
+                        你是方向归纳者。不要修改任何文件，也不要用 pwsh / 任何命令写文件（`tools.deny` 只挡 write/edit，挡不住 shell 重定向）。同样只用 web_search，不要尝试 web_fetch。
+                        把当前 agent 领域归纳成 5-8 个"正在被攻"的方向（具体到技术争点，不要写"多模态""更强推理"这类空话）。
+                        每个方向给出：核心问题 / 为什么现在能做 / 2-3 篇支撑论文（标题+链接，索引级即可）/ 该方向的争点或分歧。
+                        输出（≤45 行）。并明确标出：哪些方向是"新问题"，哪些只是"老问题换新方法"。
+                        链接同样标注"索引级（未核验）"。
+                    - label: counter-scout
+                      preset: standard
+                      tools:
+                        deny: [ write, edit ]
+                      instruction: |-
+                        你是反证检索者。不要修改任何文件，也不要用 pwsh / 任何命令写文件（`tools.deny` 只挡 write/edit，挡不住 shell 重定向）。你这一阶段**要用浏览器**（本阶段只有你一个用浏览器，不会有抢占）。
+                        先用 `skill` 工具加载 `tabbit` 技能，再按它的规范调用 Tabbit CLI：
+                        `& "$env:LOCALAPPDATA\Tabbit\LocalAgent\bin\tabbit-cli.exe"`，task 名用 `fs-counter-scout`，
+                        结束前必须 `finish --task fs-counter-scout`。Windows 下多行 JS 用 UTF-8 临时文件 + cmd 重定向（见技能里的模板）。
+                        目标：找与主流叙事相反的证据 —— 复现失败/不可复现、评测被质疑（数据污染、指标注水、基准饱和）、
+                        被高估的方向、成本与可靠性负面结果、安全与失控风险的严肃批评。
+                        每条给：主张 / 谁提的(机构或作者) / 时间 / 链接 / 它削弱了哪个流行结论 / 核验状态。
+                        核验状态只允许填 VERIFIED（你真在浏览器里打开并看到标题与时间）或 UNVERIFIED。
+                        输出（≤35 行）。某类反证确实找不到就写"未找到"并列出你搜过的关键词，不要编。
+                - name: source-verify
+                  tasks:
+                    - label: source-audit
+                      preset: standard
+                      tools:
+                        deny: [ write, edit ]
+                      instruction: |-
+                        你是文献核验者，本阶段唯一任务，也是整条链路的防幻觉关口。不要修改任何文件，也不要用 pwsh / 任何命令写文件（`tools.deny` 只挡 write/edit，挡不住 shell 重定向）。
+                        环境事实：web_fetch 不可用，页面核验**必须**通过 Tabbit 浏览器。
+                        先 `skill` 加载 `tabbit`，用 `& "$env:LOCALAPPDATA\Tabbit\LocalAgent\bin\tabbit-cli.exe"`，
+                        task 名 `fs-source-audit`，结束前 `finish --task fs-source-audit`。
+                        效率要点：
+                        - 批量核验 arXiv：用页面上下文直接取 API，例如
+                          `const r = await page.fetch("https://export.arxiv.org/api/query?id_list=2503.13657,2509.21240", {as: "text"});`
+                          返回 Atom XML，含 <title>/<published>/<name>，可比逐页导航快一个数量级。
+                        - 镜像域名（ezproxy/ar5iv/sinoxiv/browse-export 等）一律回落到 `https://arxiv.org/abs/<id>` 核对。
+                        - 只取标题、作者、首次提交时间、venue；不要读全文。
+                        对 stage 1 的每条候选（三条清单合并去重，上限 22 条，超出按下相关度截断并说明）：
+                        核验 (a) 页面真实可达；(b) 标题/机构/时间与陈述一致；(c) "一句话贡献"与摘要实际主张一致。
+                        输出（≤55 行）：每条一行
+                        `编号 | VERIFIED / UNVERIFIED / MISMATCH | 官方链接 | 标题(实测) | 时间(实测) | 不一致之处`
+                        规则：打不开、标题不符、时间不符一律不得给 VERIFIED；不确定就 UNVERIFIED；禁止脑补。
+                        最后单列一节"新颖性初查（仅对最像创新的 5 条）"：给出更早的最近邻工作（标题+时间+链接）与时间先后证据，
+                        并判定它属于 新问题 / 新机制 / 新数据或评测 / 只是换名或组合。
+                - name: synthesize
+                  tasks:
+                    - label: report-writer
+                      preset: standard
+                      instruction: |-
+                        你是报告撰写者，唯一被允许写文件的人。把上面的检索与核验结果写成一份中文调研报告。
+                        文件路径（必须精确写到这里，UTF-8 无 BOM）：D:\开源团队作品\agent-frontier-survey-2026-10.md
+                        规则：
+                        - 正文只写 source-audit 判为 VERIFIED 且给出官方链接的条目。
+                        - UNVERIFIED / MISMATCH 只能出现在"未核验与局限"一节，并写明为什么没通过。
+                        - 论文标题保留英文原文，正文中文；每条引用带编号与可点击链接与时间(YYYY-MM)。
+                        - 不许出现没有链接的论文；不许把"搜索摘要说"写成结论；不许删除"反证"章节里的负面证据。
+                        结构（必须齐全）：
+                        # Agent 前沿技术调研（2026-10）
+                        ## 0 摘要（≤200 字，先给结论）
+                        ## 1 前沿在做什么：5-8 个方向（每方向：在解决什么问题 / 为什么是现在 / 代表工作 / 争点）
+                        ## 2 代表性论文 Top 10（Markdown 表格：题目 / 机构 / 时间 / 来源 / 一句话贡献 / 链接 / 核验状态）
+                        ## 3 最具创新性的 3 篇（与最近邻工作的差别 + 时间先后）
+                        ## 4 争议与反证（含被高估的方向与被质疑的基准）
+                        ## 5 未解决问题与未来 12 个月判断
+                        ## 6 未核验与局限（方法、时间窗、检索来源、web_fetch 不可用这一环境限制、未通过核验的条目）
+                        ## 7 参考文献（编号 + 标题 + 链接 + 时间 + 核验状态）
+                        写完必须用 read 工具读回文件确认落盘成功（长度、章节数）。
+                        输出（≤20 行）：文件路径 / 章节清单 / 引用条数 / 未核验条数 / 落盘确认证据。
+                - name: citation-audit
+                  tasks:
+                    - label: citation-audit
+                      preset: standard
+                      tools:
+                        deny: [ write, edit ]
+                      instruction: |-
+                        你是引用审计者，只读：不要修改任何文件，也不要用 pwsh / 任何命令写文件。报告路径：D:\开源团队作品\agent-frontier-survey-2026-10.md
+                        用 Tabbit 浏览器（`skill` 加载 `tabbit`，task 名 `fs-citation-audit`，结束前 finish）
+                        逐条打开报告里出现的**每一个**链接，复核：可达性、标题是否一致、时间是否一致、
+                        报告对它的陈述是否超出摘要实际主张。
+                        另外检查：正文是否混入未核验条目、是否有无链接的论文、Top10 表格与参考文献是否互相一致、
+                        "反证"章节里的负面证据是否被悄悄删掉。
+                        输出（≤45 行）：
+                        `DEFECT n: 报告原文摘录 | 问题 | 证据(实际打开的 URL + 看到的内容) | 建议动作`
+                        每条引用另给一行 PASS/FAIL。没发现问题就写"未发现"并给出你实际打开的链接数。
+                - name: repair
+                  tasks:
+                    - label: certified-repair
+                      preset: standard
+                      instruction: |-
+                        你是修复者。只修 citation-audit 中被证据证实的问题（DEFECT / FAIL），
+                        不要重写全文、不要新增未核验的论文、不要润色。
+                        报告路径：D:\开源团队作品\agent-frontier-survey-2026-10.md
+                        动作只能是：删除不成立引用 / 按核验结果修正标题或链接 / 把无法核验的条目降级到"未核验与局限"一节。
+                        改完用 read 工具读回文件确认落盘。
+                        输出（≤25 行）：`DEFECT n → 改动 → 旧内容 → 新内容`，以及不修项与原因（证据不足 / 超出范围）。
+- id: llm-pi-ai
+  name: "@deepseek-ai/dsh-llm-pi-ai"
+  config:
+    providers:
+      openai:
+        apiKeyEnv: OPENAI_API_KEY
+- id: agent-default-model
+  name: "@deepseek-ai/dsh-agent-default-model"
+  config:
+    provider: deepseek-official
+    model: deepseek-flash
+    reasoningEffort: high
