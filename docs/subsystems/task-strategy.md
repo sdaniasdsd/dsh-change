@@ -2,17 +2,11 @@
 
 English | [中文](task-strategy.zh.md)
 
-The experimental [task-strategy library](../../packages/experimental/task-strategy/README.md) keeps author policy identities separate from DSH plugin identities. Its optional Cordis carrier exposes `ctx.taskStrategies`; original [subagents](subagent.md), [presets](core.md), and [Jobs](jobs.md) own execution and observation.
+The experimental task-strategy library keeps author workflow decisions separate from DSH plugin identities. Its optional Cordis carrier is loaded only through an explicit profile patch. Once enabled, `ctx.taskStrategies` validates an ordered plan and dispatches each lower task through DSH's existing preset, subagent, and Jobs services. Lower agents do not receive the strategy control tools.
 
-## Author decisions and execution plans
+Stages run in order; tasks within a stage may run concurrently. Presets and tool filters are checked before dispatch, and progress is recorded in an owned DSH job. Unloading the carrier removes its registrations but leaves accepted Jobs under the Jobs service lifetime; use `job_kill` for explicit cancellation. Concurrent tasks can still share files, so authors must coordinate writes. Completion means the child turns ended, not that their output was independently verified.
 
-[`AuthorStrategy`](../../packages/experimental/task-strategy/src/types.ts) names an author decision function. `StrategyInput` contains a task and optional string-valued preferences. `ExecutionPlan` contains a name and ordered stages; each stage contains one or more `TaskStep` values. A step selects a preset, instructions, an optional tool allow/deny filter, and optional model route overrides. Strategies can return different plans according to author preferences without registering plugins.
-
-`TaskExecutor` accepts a step, assembled prompt, and cancellation signal. It settles only after releasing child resources. `ExecutionOptions` sets per-run concurrency, task count, retained result-byte limits, and an optional best-effort observer. `ExecutionResult` contains a terminal status and labelled `TaskResult` values. The executor passes preceding stage results as data, aborts siblings on failure, and drains active children before returning. Completion is a model-turn outcome, not independent correctness verification. See the [source types](../../packages/experimental/task-strategy/src/types.ts) for exact declarations.
-
-## Original DSH integration
-
-`StrategyDefinition` provides a declarative default plan and preference-selected variants. `AdapterConfig` restricts allowed preset identities and configures provider, tool names, and limits. The carrier validates all stages before accepting an owned Job. The upper Agent can preview a policy or dispatch an explicit plan; lower subagents do not inherit strategy control tools. Jobs report stages and child identities and handle cancellation. Children share files; author strategies must coordinate writes. The [package README](../../packages/experimental/task-strategy/README.md) owns configuration examples and limitations.
+See the [package documentation](../../packages/experimental/task-strategy/README.md) for plan and profile-patch examples.
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 

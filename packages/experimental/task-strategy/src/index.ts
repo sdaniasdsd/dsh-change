@@ -1,5 +1,11 @@
 /** Independent author strategy registry. Cordis integration lives in ./cordis.ts. */
+// The type import keeps the carrier separately loadable while exposing its optional service in API projections.
+import type TaskStrategies from './cordis.ts'
 import type { AuthorStrategy, ExecutionPlan, StrategyInput } from './types.ts'
+
+declare module '@deepseek-ai/cordis' {
+  interface Context { taskStrategies: TaskStrategies }
+}
 export type * from './types.ts'
 export { executePlan, validatePlan } from './executor.ts'
 

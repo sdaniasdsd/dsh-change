@@ -2,17 +2,11 @@
 
 [English](task-strategy.md) | 中文
 
-实验性的 [task-strategy 代码库](../../packages/experimental/task-strategy/README.zh.md) 将作者策略身份与 DSH 插件身份分开。可选的 Cordis 载体提供 `ctx.taskStrategies`；原版[子任务](subagent.zh.md)、[预设](core.zh.md)、[Jobs](jobs.zh.md) 负责执行和观察。
+实验性的 task-strategy 库将作者的工作流决策与 DSH 插件身份分开。它的可选 Cordis 载体仅通过显式 profile patch 加载。启用后，`ctx.taskStrategies` 会校验有序计划，并通过 DSH 现有的 preset、subagent 和 Jobs 服务分发各个下层任务；下层 agent 不会获得策略控制工具。
 
-## 作者决策与执行计划
+阶段按顺序执行，同一阶段内的任务可以并发。分发前会检查预设与工具过滤器，进度记入 DSH 自有 job。卸载载体会移除其注册，但已接收的 Job 继续遵循 Jobs 服务的生命周期；需要显式取消时使用 `job_kill`。并发任务仍可能共享文件，因此作者需要协调写入。任务轮次结束仅表示子任务已结束，不代表其输出经过独立验证。
 
-[`AuthorStrategy`](../../packages/experimental/task-strategy/src/types.ts) 为作者决策函数命名。`StrategyInput` 包含任务及可选的字符串偏好。`ExecutionPlan` 包含名称与顺序阶段，每阶段包含一个或多个 `TaskStep`。步骤选择预设、指令、可选的工具白名单／黑名单及可选模型路由覆盖项。策略可以根据作者偏好返回不同计划，不注册插件。
-
-`TaskExecutor` 接收步骤、组装后的 prompt 与取消信号，仅在子任务资源释放之后结算。`ExecutionOptions` 指定单次运行的并发、任务数、保留结果字节上限及可选的尽力观察回调。`ExecutionResult` 包含终态与标注的 `TaskResult`。执行器将前阶段结果作为数据传递，失败时取消兄弟任务，并在返回前排空活动子任务。完成只是模型轮次结果，不代表独立验证正确性。确切声明见[源码类型](../../packages/experimental/task-strategy/src/types.ts)。
-
-## 接入原版 DSH
-
-`StrategyDefinition` 提供声明式默认计划与按偏好选择的变体。`AdapterConfig` 限制允许的预设身份，配置提供方、工具名及上限。载体在接受自有 Job 前校验全部阶段。上层 Agent 可以预览策略或分发显式计划，下层子任务不会继承策略控制工具。Jobs 报告阶段与子任务身份，并处理取消。子任务共享文件，作者策略必须协调写入。[包说明](../../packages/experimental/task-strategy/README.zh.md) 负责配置示例与限制。
+计划格式和 profile patch 示例见[包文档](../../packages/experimental/task-strategy/README.zh.md)。
 
 <!-- BEGIN GENERATED cordis-surface (gen-cordis-catalog.ts) — do not edit between markers -->
 

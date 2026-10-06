@@ -10,10 +10,6 @@ import { adapterSchema, boundText } from './schema.ts'
 import { strategyTools } from './tools.ts'
 import type { AdapterConfig, AuthorStrategy, ExecutionPlan, StrategyInput, TaskExecutor } from './types.ts'
 
-declare module '@deepseek-ai/cordis' {
-  interface Context { taskStrategies: TaskStrategies }
-}
-
 declare module '@deepseek-ai/dsh-jobs' {
   interface JobKindMap { strategy: 'strategy' }
 }
