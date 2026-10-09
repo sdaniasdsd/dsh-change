@@ -23,7 +23,7 @@ describe('registered strategy token estimates', () => {
     expect(registry.list()[0]).toMatchObject({ cost: { kind: 'estimated', basis: 'registration',
       tasks: 1, stages: 1, knownInputTokens: inputTokens('') } })
     expect(decide).not.toHaveBeenCalled()
-    policy.cost.plan.stages[0]!.tasks[0]!.instruction = 'mutated'
+    Reflect.set(policy.cost.plan.stages[0]!.tasks[0]!, 'instruction', 'mutated')
     expect(registry.list()[0]).toMatchObject({ cost: { knownInputTokens: inputTokens('') } })
     remove()
     expect(registry.list()).toEqual([])

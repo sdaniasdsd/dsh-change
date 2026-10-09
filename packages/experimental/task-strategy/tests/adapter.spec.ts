@@ -210,7 +210,7 @@ describe('Loader-composed strategy adapter', () => {
     let rootStep = 0
     const script: ConstructorParameters<typeof MockAdapter>[0] = Array.from({ length: 18 }, () => (request) => {
       if (request.sessionId !== 'strategy-parent') {
-        return request.tools.some(tool => tool.name === 'structured_output')
+        return request.tools?.some(tool => tool.name === 'structured_output')
           ? toolCallResponse('selection-result', 'structured_output', { strategy: 'review-first' }) : textResponse('done')
       }
       switch (rootStep++) {
@@ -225,7 +225,7 @@ describe('Loader-composed strategy adapter', () => {
     })
     const { ctx, parent } = await boot(script, undefined, undefined, true)
     const requestListener = kind === 'answered' ? ctx.on('user-questions/request', async () => ({ answers: [{ id: 'strategy', selected: ['review-first'] }] }))
-      : ctx.on('user-questions/request', async request => await new Promise((resolve, reject) => {
+      : ctx.on('user-questions/request', async request => await new Promise((_resolve, reject) => {
         request.signal!.addEventListener('abort', () => { reject(new Error('question deadline')) }, { once: true })
       }))
     parent.followup(createUserMessage({ content: [{ type: 'text', text: 'Run task with an optional strategy choice.' }], source: { kind: 'user' } }))
@@ -307,7 +307,7 @@ describe('Loader-composed strategy adapter', () => {
       .rejects.toThrow('did not complete')
     const receipt = await ctx.taskStrategies.submitTask(parent, { requestId: 'correct-choice', task: 'task' }, new AbortController().signal)
     await ctx.jobs.wait(receipt.jobId, 5000, parent.id)
-    expect(model.requests.slice(0, 3).every(request => request.tools.map(tool => tool.name).join(',') === 'structured_output')).toBe(true)
+    expect(model.requests.slice(0, 3).every(request => request.tools?.map(tool => tool.name).join(',') === 'structured_output')).toBe(true)
     expect(JSON.stringify(model.requests[2]!.messages)).toContain('coding_only')
   })
 
@@ -336,7 +336,7 @@ describe('Loader-composed strategy adapter', () => {
     expect((await ctx.jobs.wait(receipt.jobId, 5000, parent.id)).status).toBe('completed')
     expect(ctx.jobs.list(parent.id)).toHaveLength(1)
     expect(model.requests).toHaveLength(3)
-    expect(model.requests[0]!.tools.map(tool => tool.name)).toEqual(['structured_output'])
+    expect(model.requests[0]!.tools?.map(tool => tool.name)).toEqual(['structured_output'])
     expect(JSON.stringify(model.requests[0]!.messages)).toContain('  修复问题')
     expect(ctx.agents.list()).toHaveLength(1)
     const replay = ctx.taskStrategies.submitTask(parent, request, new AbortController().signal)
@@ -553,7 +553,7 @@ describe('Loader-composed strategy adapter', () => {
   it('canonicalizes traced and original service identities into the same owner store', async () => {
     const { ctx, parent } = await boot()
     const jobs = (ctx.jobs as typeof ctx.jobs & { [symbols.original]: typeof ctx.jobs })[symbols.original]
-    expect(ownerRuns(jobs, parent)).toBe(ownerRuns(ctx.jobs, parent))
+    expect(ownerRuns(jobs!, parent)).toBe(ownerRuns(ctx.jobs, parent))
   })
 
   it('selects a configured variant only for matching author preferences', async () => {

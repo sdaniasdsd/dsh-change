@@ -315,9 +315,9 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
 
 async function main(): Promise<void> {
   const editionManifest: unknown = JSON.parse(await readFile(join(app.getAppPath(), 'package.json'), 'utf8'))
-  if (typeof editionManifest === 'object' && editionManifest !== null
+  const policyEdition = typeof editionManifest === 'object' && editionManifest !== null
     && 'dshPolicyEdition' in editionManifest && editionManifest.dshPolicyEdition === true
-    && process.env.DSH_HOME === undefined) {
+  if (policyEdition && process.env.DSH_HOME === undefined) {
     process.env.DSH_HOME = join(homedir(), '.dsh-policy')
   }
   void pruneCrashReports(app.getPath('logs'))
@@ -1232,7 +1232,7 @@ async function main(): Promise<void> {
     window.focus()
   }
 
-  if (app.isPackaged || process.env.DSH_DESKTOP_DEV_APP === '1') app.setAsDefaultProtocolClient('dsh')
+  if (!policyEdition && (app.isPackaged || process.env.DSH_DESKTOP_DEV_APP === '1')) app.setAsDefaultProtocolClient('dsh')
   app.on('open-url', (event, url) => {
     event.preventDefault()
     if (url === 'dsh://open' || url === 'dsh://open/') focusPrimaryWindow()

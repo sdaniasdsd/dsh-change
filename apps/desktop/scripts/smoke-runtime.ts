@@ -1,6 +1,6 @@
 /** Boot the materialized target runtime without access to a user's Harness profile. */
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { execFile } from 'node:child_process'
@@ -25,6 +25,7 @@ export async function smokeDesktopRuntime(
 ): Promise<void> {
   const home = mkdtempSync(join(tmpdir(), 'dsh-desktop-smoke-'))
   const profile = join(home, 'profiles', 'desktop')
+  const policyEdition = existsSync(join(root, 'policy-workflows.patch.yml'))
   const host = new DesktopHostProcess(node, root, profile, undefined, { ...environment, DSH_HOME: home },
     undefined, join(resourcesRuntime, 'primary-runtime'),
     { pnpm: join(resourcesRuntime, 'pnpm', 'bin', 'pnpm.cjs'), nodeBin: join(resourcesRuntime, 'bin') })
@@ -56,6 +57,9 @@ export function apply(ctx) {
   if (!(ctx instanceof Context)) throw new Error('desktop runtime: external plugin loaded another Cordis instance')
   ctx.effect(() => ctx.webServer.register({ kind: 'exact', path: '/desktop-smoke',
     handler(_request, response) { response.end('plugin route ready') } }))
+  ${policyEdition ? `ctx.effect(() => ctx.webServer.register({ kind: 'exact', path: '/desktop-smoke-strategies',
+    handler(_request, response) { response.end(JSON.stringify({ strategies: ctx.taskStrategies.list({ task: 'Explain 2 + 2' }),
+      client: ctx.clientModules.graph().entries.some(entry => entry.id === '@deepseek-ai/dsh-experimental-task-strategy') })) } }))` : ''}
   ctx.effect(() => ctx.webServer.register({ kind: 'exact', path: '/desktop-smoke-office-cli',
     async handler(_request, response) {
       try {
@@ -90,7 +94,7 @@ export function apply(ctx) {
   }
 }
 `)
-    writeFileSync(join(plugin, 'bundle.yml'), '- insert:\n    - id: desktop-runtime-smoke-plugin\n      name: desktop-runtime-smoke-plugin\n      inject: [webServer, officeToPdf, skills]\n')
+    writeFileSync(join(plugin, 'bundle.yml'), `- insert:\n    - id: desktop-runtime-smoke-plugin\n      name: desktop-runtime-smoke-plugin\n      inject: [webServer, officeToPdf, skills${policyEdition ? ', taskStrategies, clientModules' : ''}]\n`)
     const manifest = JSON.parse(readFileSync(join(profile, 'package.json'), 'utf8')) as {
       dependencies: Record<string, string>
       dsh: { profile: { bundles: string[] } }
@@ -111,6 +115,20 @@ export function apply(ctx) {
     }
     const pluginResponse = await fetch(new URL('/desktop-smoke', ready.url), { headers: { cookie } })
     if (await pluginResponse.text() !== 'plugin route ready') throw new Error('desktop runtime: plugin HTTP route failed')
+    if (policyEdition) {
+      const response = await fetch(new URL('/desktop-smoke-strategies', ready.url), { headers: { cookie } })
+      const { strategies, client } = await response.json() as {
+        client: boolean
+        strategies: { id: string; cost?: { kind: string; basis?: string } }[]
+      }
+      const expected = ['coding', 'paper-research', 'problem-research', 'solution-planning']
+        .flatMap(domain => ['low', 'medium', 'high'].map(tier => `${domain}-${tier}`))
+      if (!client || strategies.length !== 12 || expected.some(id => !strategies.some(strategy => strategy.id === id
+        && strategy.cost?.kind === 'estimated' && strategy.cost.basis === 'task'))) {
+        throw new Error('desktop runtime: policy edition did not load all 12 workflows with task token estimates')
+      }
+      console.log('desktop runtime: strategy client, 12 policy workflows and task token estimates passed')
+    }
     for (const { extension } of inputs) {
       const converted = await fetch(new URL(`/desktop-smoke-office/${extension}`, ready.url), {
         headers: { cookie }, signal: AbortSignal.timeout(120_000),

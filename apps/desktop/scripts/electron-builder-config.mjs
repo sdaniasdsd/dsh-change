@@ -102,11 +102,12 @@ export function createElectronBuilderConfig(
   const packaged = resolveDesktopBuildCommit(env)
   return {
     appId,
-    protocols: [{ name: 'DeepSeek Harness', schemes: ['dsh'] }],
+    protocols: policyEdition ? [] : [{ name: 'DeepSeek Harness', schemes: ['dsh'] }],
     extraMetadata: {
       dshDesktopAppId: appId,
       ...(policy === undefined ? {} : { dshMandatoryUpdatePolicy: policy }),
-      ...(policyEdition ? { dshPolicyEdition: true, dshPolicyEditionVersion: '0.1.0' } : {}),
+      ...(policyEdition ? { name: 'dsh-policy-desktop', productName: 'DSH Policy Edition',
+        dshPolicyEdition: true, dshPolicyEditionVersion: '0.1.0' } : {}),
       ...buildVersion === productVersion ? {} : { version: buildVersion },
       ...packaged === undefined ? {} : { dshBuildCommit: packaged.commit, dshBuildDirty: packaged.dirty },
     },

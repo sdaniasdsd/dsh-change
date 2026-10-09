@@ -163,8 +163,19 @@ async function main(): Promise<void> {
       const carrier = join(DSH_OUTPUT_ROOT, 'node_modules', '@deepseek-ai/dsh-experimental-task-strategy')
       copyFileSync(join(DSH_OUTPUT_ROOT, 'policy-workflows.patch.yml'), join(carrier, 'workflows.patch.yml'))
       const manifest = JSON.parse(readFileSync(join(carrier, 'package.json'), 'utf8')) as Record<string, unknown>
-      manifest.dsh = { bundle: { patch: 'workflows.patch.yml' } }
+      manifest.dsh = { ...(manifest.dsh as Record<string, unknown>), bundle: { patch: 'workflows.patch.yml' } }
+      // Bare package mounts let the original client scanner discover the adapter's UI.
+      const exports = manifest.exports as Record<string, unknown>
+      exports['.'] = exports['./cordis']
+      manifest.main = 'lib/cordis.js'
+      const workflow = readFileSync(join(carrier, 'workflows.patch.yml'), 'utf8')
+        .replace('"@deepseek-ai/dsh-experimental-task-strategy/cordis"', '"@deepseek-ai/dsh-experimental-task-strategy"')
+      writeFileSync(join(carrier, 'workflows.patch.yml'), workflow)
       writeFileSync(join(carrier, 'package.json'), `${JSON.stringify(manifest, undefined, 2)}\n`)
+      const cliManifestPath = join(DSH_OUTPUT_ROOT, 'node_modules', '@deepseek-ai/dsh/package.json')
+      const cliManifest = JSON.parse(readFileSync(cliManifestPath, 'utf8')) as { dependencies: Record<string, string> }
+      cliManifest.dependencies['@deepseek-ai/dsh-experimental-task-strategy'] = String(manifest.version)
+      writeFileSync(cliManifestPath, `${JSON.stringify(cliManifest, undefined, 2)}\n`)
     }
     await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:manifests', () => prepareRuntimeManifests(DSH_OUTPUT_ROOT))
     await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:primary-smoke', async () => smokePrimaryRuntime(join(RUNTIME_ROOT, 'primary-runtime')))

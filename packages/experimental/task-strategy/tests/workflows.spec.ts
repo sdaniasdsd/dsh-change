@@ -14,7 +14,8 @@ describe('configurable workflow library', () => {
     const registry = new StrategyRegistry(text => estimateContent([{ type: 'text', text }]) + ROLE_OVERHEAD)
     let decisions = 0
     for (const policy of config.strategies) registry.register({ id: policy.id, description: policy.description,
-      cost: { plan: policy.plan, assumptions: policy.tokenCost }, decide: () => { decisions++; return policy.plan } })
+      cost: { plan: policy.plan, ...policy.tokenCost === undefined ? {} : { assumptions: policy.tokenCost } },
+      decide: () => { decisions++; return policy.plan } })
     expect(registry.list()).toHaveLength(12)
     for (const domain of ['coding', 'paper-research', 'problem-research', 'solution-planning']) {
       for (const [tier, tasks] of [['low', 1], ['medium', 3], ['high', 6]] as const) {
@@ -34,6 +35,6 @@ describe('configurable workflow library', () => {
     { callsPerTask: 1, contextTokensPerCall: 0 },
   ])('rejects malformed external scenario configuration: %j', (tokenCost) => {
     expect(() => adapterSchema({ allowedPresets: ['standard'], strategies: [{ id: 'bad', description: 'bad', tokenCost,
-      plan: { name: 'bad', stages: [] } }] } as AdapterConfig)).toThrow()
+      plan: { name: 'bad', stages: [] } }] } as unknown as AdapterConfig)).toThrow()
   })
 })

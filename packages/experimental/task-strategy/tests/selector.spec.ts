@@ -10,11 +10,11 @@ const candidates = [{ id: 'auto', description: '策略' }]
 const parent = {} as Agent
 function bench(result: SubagentResult = { stopReason: 'completed', output: [], structured: { strategy: 'auto' } }) {
   const dispose = vi.fn<() => Promise<void>>(async () => {})
-  const run: SubagentRun = { id: SessionId('choice'), result: Promise.resolve(result), dispose }
-  const provider: SubagentProvider = { name: 'spawn', capabilities: { agentOptions: true, outputSchema: true, depthLimit: true, toolFilter: true, persona: true }, start: async () => run }
+  const run: SubagentRun = { id: SessionId('choice'), localAgent: undefined, result: Promise.resolve(result), dispose }
+  const provider: SubagentProvider = { name: 'spawn', inheritsParentContext: false, capabilities: { agentOptions: true, outputSchema: true, depthLimit: true, toolFilter: true, persona: true }, start: async () => run }
   const start = vi.fn(async (_name: string, _request: SubagentStartRequest) => run)
   const getProvider = vi.fn(() => provider)
-  const subagents = { start, getProvider } as Context['subagents']
+  const subagents = { start, getProvider } as unknown as Context['subagents']
   return { run, provider, subagents, start, getProvider, dispose }
 }
 describe('bounded selector operation', () => {
