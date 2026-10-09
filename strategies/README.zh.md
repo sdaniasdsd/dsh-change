@@ -10,13 +10,14 @@
 | 文件 | 说明 |
 |---|---|
 | `cordis.patch.yml` | 可直接粘贴到 profile `cordis.patch.yml` 的 insert 片段（3 条策略，已内置只读阶段的 shell 写文件禁令） |
+| `workflows.patch.yml` | 四类工作流各含低、中、高三档，Token 场景参数可编辑 |
 | `examples/frontier-survey-2026-10.md` | 用 `frontier-survey` 跑出来的真实产物（agent 前沿调研，50 条参考文献逐条浏览器核验） |
 
 ---
 
 ## 1. 载体与数据结构
 
-- 插件：`@deepseek-ai/dsh-experimental-task-strategy`（`0.2.1-alpha.1`）
+- 插件：`@deepseek-ai/dsh-experimental-task-strategy`（`0.2.0-rc.2`）
 - 挂载点：profile 的 `cordis.patch.yml` —— 顶层数组里的一个 `insert` 项（见本目录 `cordis.patch.yml`）
 - 数据结构：
 
@@ -35,7 +36,7 @@ strategies:
               tools: { allow: [...], deny: [...] }   # 可选，名字必须在该 preset 作用域真实存在
               model: <可选>       # 需要 provider 支持 agentOptions
               provider: <可选>
-    variants:                     # 可选，见踩坑 #3（本版本不可用）
+    variants:                     # 可选，历史构建限制与当前工作区状态见踩坑 #3
       - { preference: depth, equals: quick, plan: {...} }
 ```
 
@@ -87,15 +88,18 @@ job_kill(jobId)                                     # 取消
 2. **浏览器是独占资源，并发会互相踩**。两个子任务同时驱动同一个浏览器实例时，一个报错、另一个被连带 `aborted`，整条计划失败。
    规避：把浏览器阶段拆成"每阶段 1 个 task"，用多个顺序 stage 代替同阶段并发。
 
-3. **`variants` / `preferences` 在本版本必抛异常**：
+3. **`variants` / `preferences` 在已提交的 `0.2.0-rc.2` 代码上必抛异常**：
    `Cannot assign to read only property '<key>'`。
    根因：`dsh-tools` 会对工具入参 `deepFreeze`，而 `schemastery` 3.18 的 `dict` 校验会**回写入参**（归一化 key）。
    规避：把"备选方案"写成**第二个策略 id**；等上游修好再改回 variants。
+   现状：Policy Edition 0.1.0 已修好——把克隆后的值交给该校验（`packages/experimental/task-strategy/src/schema.ts` 的 `parsePreferences`），
+   并有测试覆盖：配置的 variant 只被匹配的作者偏好选中，以及偏好字典的去重不依赖 Unicode 键的插入顺序。
+   从原策略分支旧 `0.2.0-rc.2` 提交构建出的版本仍会抛异常；首个 Policy Edition 发布包含该修复。
 
 4. **`tools.deny: [write, edit]` 拦不住 `pwsh`**。被 deny 的子任务仍可用 shell 重定向写文件——实测有子任务借此越权写了报告文件，还在输出里主动承认。
    规避：只读阶段的 instruction 里必须显式写"不要用 pwsh / 任何命令写文件"。本包已内置该禁令。
 
-5. **`maxResultBytes` 限的是"累计 prior 结果"的 JSON 字节数**，不是单个子任务输出。默认 `65536` 会让 7 个子任务的计划在中途
+5. **`maxResultBytes` 限的是"累计 prior 结果"的 JSON 字节数**，不是单个子任务输出。实测一个输出较长的 7 子任务计划在默认 `65536` 下中途
    `Execution exceeds result byte limit` 失败。本包设为 `262144`，`maxOutputBytes` 设为 `49152`。
 
 6. **任一子任务 `stopReason != completed` 会 abort 同阶段兄弟并跳过后续 stage**，结果里只留部分数据。
@@ -117,3 +121,21 @@ job_kill(jobId)                                     # 取消
 ```
 
 若同 id（`experimental-task-strategy`）已存在，则替换其 `config`。改完等待热加载（可能延迟约 1 分钟），用 `task_strategy_list` 确认策略已注册。
+
+<a id="workflow-library"></a>
+## 6. 可配置工作流与 Token 估算
+
+[workflows.patch.yml](workflows.patch.yml) 提供 12 条策略，适用于已提供 preset 注册表与 `standard` 的 Web profile。SDK/headless 组合需显式提供这些原版服务。如果已有载体，将新增 `strategies` 合并到唯一的 `config.strategies` 列表，保留已有策略与 variants；不要追加第二个载体或重复 id。源码工作区沿用既有 profile 中载体的规范构建文件 URL。
+
+| 类型 | id 前缀 | 低 / 中 / 高档子任务数 |
+|---|---|---|
+| 编程 | `coding-` | 1 / 3 / 6 |
+| 论文调研 | `paper-research-` | 1 / 3 / 6 |
+| 问题研究 | `problem-research-` | 1 / 3 / 6 |
+| 方案规划 | `solution-planning-` | 1 / 3 / 6 |
+
+前缀后追加 `low`、`medium` 或 `high`。低档处理明确的小任务；中档拆分取证、工作和验证；高档增加风险分析、独立审查和修复。阶段顺序执行。编程在适用时遵循复现/测试/实现/验证；研究区分核验来源与主张；规划交付接口与验收步骤，不实施。指令引导行为，文件系统与 shell 保护仍由原版权限及工具过滤决定。
+
+每条策略的 `tokenCost` 提供可编辑假设：`callsPerTask`、`contextTokensPerCall`、`outputTokensPerCall`。模板数值是示例场景，不是实测用量、限制或承诺。删除 `tokenCost` 后只展示已知输入与未知项。用 `{ "task": "原始任务", "preferences": {} }` 查询 `task_strategy_list`，可计入原任务与偏好匹配的变体。插件页的注册估算不含任务正文。参见[估算契约](../packages/experimental/task-strategy/README.zh.md#token-estimates)。
+
+向 `task_strategy_submit` 传入 `strategy: "coding-medium"` 可指定策略；自动默认模式下省略 `strategy` 即可。自动选择考虑任务适用性与成本不确定性，无需用户回复即可继续。用带 `wait: true` 的 `job_output` 观察结果。Token 用量不能决定 `maxResultBytes`：7 个小结果能装进 65,536 字节，7 个各 10,000 字符的结果会超过累计 JSON 上限。需明确提高结果限制或缩短子任务输出，不把任务数当成字节测量。

@@ -15,17 +15,26 @@
   en: d152484eb41ac6b4
   zh: 1db86285abf6c499
 /deepseek-ai-dsh-experimental-task-strategy/use-this-package:
-  en: bbff250eba0f1b89
-  zh: 0a618f05cc88ee2b
+  en: ba37bcee3e299af8
+  zh: 5d060ad825dc3083
+/deepseek-ai-dsh-experimental-task-strategy/use-this-package/explainable-token-estimates:
+  en: 8c24c80fc352d571
+  zh: 6a152b648504383c
 /deepseek-ai-dsh-experimental-task-strategy/use-this-package/independent-author-decisions:
-  en: aebe6d75bab363db
-  zh: 8bbfdc647db7ef5e
+  en: af2c3b635a8727d8
+  zh: c29b49bec277e4f6
+/deepseek-ai-dsh-experimental-task-strategy/use-this-package/task-owned-strategy-replacement:
+  en: 3189749060780501
+  zh: f0abc385e0f8a5bf
+/deepseek-ai-dsh-experimental-task-strategy/use-this-package/automatic-intake-and-optional-choice:
+  en: 340ca482526e0b7c
+  zh: 63396dc90c2aa6c2
 /deepseek-ai-dsh-experimental-task-strategy/use-this-package/dsh-source-trial:
-  en: ff458b5d898a0d6b
-  zh: ce57344923e1d27f
+  en: 363615a076c1eae3
+  zh: 5fffa101a4197fe8
 /deepseek-ai-dsh-experimental-task-strategy/understand-the-implementation:
-  en: 81d14da726b5dcec
-  zh: 080231afc08ba615
+  en: 969e5466f0f5bddd
+  zh: 5d4e08d1f5d0f8d1
 /deepseek-ai-dsh-experimental-task-strategy/further-exploration:
   en: 8069a7bd6f92c22e
   zh: bd5d3e83bc31a1cd
@@ -36,17 +45,17 @@
   en: 54734e7f89a54236
   zh: 3b160813f5823038
 /deepseek-ai-dsh-experimental-task-strategy/model-experience/upper-decision-tools-and-lower-task-input/what-the-model-sees:
-  en: c74b86c37c60827a
-  zh: 36bd23bfe4efb831
+  en: 57f99470f75f9139
+  zh: d72336d857c7fa56
 /deepseek-ai-dsh-experimental-task-strategy/model-experience/upper-decision-tools-and-lower-task-input/token-effect:
-  en: e84e12351dcc4d45
-  zh: 44ebc12c03558541
+  en: 230a142796179438
+  zh: ed7d9f1d752e2082
 /deepseek-ai-dsh-experimental-task-strategy/model-experience/upper-decision-tools-and-lower-task-input/kv-cache-effect:
-  en: f04e415e58247651
-  zh: a6268a03d444f8fe
+  en: 74d170604ef10ba1
+  zh: 9f52dfe323505760
 /deepseek-ai-dsh-experimental-task-strategy/known-limitations-and-deferred-work:
-  en: 92806988ba858342
-  zh: 8d402862bcb7319e
+  en: 9e32ea64d6098c81
+  zh: cb3f93f7f3923dee
 /deepseek-ai-dsh-experimental-task-strategy/known-limitations-and-deferred-work/dev-note:
-  en: e67f633dc6fe7773
-  zh: e88aeb617ffb74ea
+  en: 0fd94ee06df797ce
+  zh: a8e1d0ac5404f1c5

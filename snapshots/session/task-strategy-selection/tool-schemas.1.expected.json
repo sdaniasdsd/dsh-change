@@ -1,0 +1,24 @@
+{
+  "initial": [
+    {
+      "name": "structured_output",
+      "description": "Report your final structured result. Call this exactly once, when your answer is complete; the arguments must match this tool's parameter schema exactly.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "strategy": {
+            "type": "string",
+            "enum": [
+              "direct"
+            ]
+          }
+        },
+        "required": [
+          "strategy"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "changes": []
+}

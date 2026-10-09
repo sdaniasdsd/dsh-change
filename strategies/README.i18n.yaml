@@ -3,11 +3,11 @@
 # After editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write strategies/README.md
 /task-strategy-pack-dsh-strategy-layer:
-  en: afbd651405665d75
-  zh: aeb598b8bb32c4f3
+  en: 3be549e4aaea8b41
+  zh: be4d582937249d4b
 /task-strategy-pack-dsh-strategy-layer/1-carrier-and-data-structure:
-  en: 44a1c20fb4ea672b
-  zh: ec906929d099c7be
+  en: 33076b9fc1a4db11
+  zh: 453a59127f870355
 /task-strategy-pack-dsh-strategy-layer/2-the-three-strategies-in-this-pack:
   en: c169913055456c54
   zh: 8fee14e87484aeba
@@ -15,8 +15,11 @@
   en: d914908b7721ca42
   zh: bda8eb75fd85124c
 /task-strategy-pack-dsh-strategy-layer/4-failure-notes-observed-not-assumed:
-  en: 0dbc6a8b6ab83ae1
-  zh: e4244b1b2b9733a4
+  en: e79c3c8185397ff3
+  zh: e53c70236a91e5b2
 /task-strategy-pack-dsh-strategy-layer/5-installation:
-  en: 79b98ba835290c6c
-  zh: ef86760f66f05e2a
+  en: b51d9deaeed6e11f
+  zh: 25d01d020c7caf5a
+/task-strategy-pack-dsh-strategy-layer/6-configurable-workflows-and-token-estimates:
+  en: 5ede8708d4770553
+  zh: 443cebb71b5f3052

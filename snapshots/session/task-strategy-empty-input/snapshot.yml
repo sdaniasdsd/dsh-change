@@ -1,0 +1,9 @@
+version: 1
+scenario: task-strategy-empty-input
+profile: headless
+composition: task-strategy
+recording: authored
+header:
+  class: task-strategy
+  pin: true
+permission: danger-full-access

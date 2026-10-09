@@ -38,6 +38,7 @@ python/**/.pytest_cache/
 packages/**/__pycache__/
 apps/web/dist/
 .artifacts/
+.superpowers/
 .dsh-build/
 .playwright-mcp/
 .orig

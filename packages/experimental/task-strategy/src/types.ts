@@ -1,7 +1,9 @@
 /** Author decisions and executor inputs, independent of Cordis and DSH plugins. */
+import type { SelectionConfig } from './selection-types.ts'
 
 /** Input shared with an author-written decision function. */
 export interface StrategyInput {
+  /** Nonblank task body; accepted text preserves the caller's whitespace. */
   readonly task: string
   readonly preferences?: Readonly<Record<string, string>>
 }
@@ -22,11 +24,57 @@ export interface ExecutionPlan {
   readonly stages: { readonly name: string; readonly tasks: TaskStep[] }[]
 }
 
-/** A named author policy, not a DSH plugin declaration. */
+/** A trusted, finite synchronous plan decision; asynchronous work belongs to the executor. */
 export interface AuthorStrategy {
   readonly id: string
   readonly description: string
-  decide(input: StrategyInput): ExecutionPlan | Promise<ExecutionPlan>
+  /** Declarative costing data; absent for an opaque dynamic plan. Never invokes decide. */
+  readonly cost?: StrategyCostDeclaration
+  decide(input: StrategyInput): ExecutionPlan
+}
+
+/** Explicit scenario assumptions, not execution limits or measured usage. */
+export interface TokenCostAssumptions {
+  /** Expected model calls per child, including its final response. */
+  readonly callsPerTask: number
+  /** Additional system, tool and within-child history tokens per model call. */
+  readonly contextTokensPerCall: number
+  /** Expected output per model call; the final response is forwarded between stages. */
+  readonly outputTokensPerCall: number
+}
+
+/** Static plans used solely for costing without evaluating author code. */
+export interface StrategyCostDeclaration {
+  readonly plan: ExecutionPlan
+  readonly variants?: StrategyDefinition['variants']
+  readonly assumptions?: TokenCostAssumptions
+}
+
+/** Uncertainty visible to the selector and user; never a billing claim. */
+export type TokenCostUnknown = 'task-body' | 'system-and-tools' | 'model-turns' | 'outputs-and-transfer'
+  | 'tool-output-variance' | 'reasoning' | 'tokenizer-and-cache' | 'selector-and-parent' | 'result-metadata-variance'
+
+/** Child-cost data excluding parent/selector costs; known input uses the injected text heuristic. */
+export type StrategyTokenCost = { readonly kind: 'unknown'; readonly reason: 'dynamic-plan' | 'estimator-unavailable' } | {
+  readonly kind: 'estimated'
+  readonly basis: 'registration' | 'task'
+  readonly planName: string
+  readonly tasks: number
+  readonly stages: number
+  /** Known task/instruction/framing tokens, once per child; excludes unknown prior outputs. */
+  readonly knownInputTokens: number
+  readonly unknowns: readonly TokenCostUnknown[]
+  readonly assumptions?: TokenCostAssumptions
+  readonly estimatedInputTokens?: number
+  readonly estimatedOutputTokens?: number
+  readonly estimatedTotalTokens?: number
+}
+
+/** Detached registered-policy description and costing data. */
+export interface StrategyCatalogEntry {
+  readonly id: string
+  readonly description: string
+  readonly cost: StrategyTokenCost
 }
 
 /** A settled child, after its executor has released all resources. */
@@ -73,10 +121,13 @@ export interface StrategyDefinition {
   readonly description: string
   readonly plan: ExecutionPlan
   readonly variants?: { readonly preference: string; readonly equals: string; readonly plan: ExecutionPlan }[]
+  /** Optional scenario assumptions; no hidden output or turn defaults. */
+  readonly tokenCost?: TokenCostAssumptions
 }
 
 /** DSH carrier configuration; these settings do not alter the plugin registry. */
 export interface AdapterConfig {
+  readonly selection: SelectionConfig
   readonly provider: string
   readonly toolPrefix: string
   readonly allowedPresets: string[]

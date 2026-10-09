@@ -1,5 +1,17 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`Loader-composed strategy adapter > records rejection of an empty tool task and allows the model to correct it > recorded empty-task rejection 1`] = `
+{
+  "content": [
+    {
+      "text": "Error: Task must not be empty",
+      "type": "text",
+    },
+  ],
+  "isError": true,
+}
+`;
+
 exports[`Loader-composed strategy adapter > records upper model decisions and original job collection without an API key > recorded upper strategy decisions 1`] = `
 [
   {

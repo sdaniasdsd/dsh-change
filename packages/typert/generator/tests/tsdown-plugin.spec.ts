@@ -65,6 +65,18 @@ afterEach(() => {
 })
 
 describe('typertPlugin', () => {
+  it('finds the workspace above a package with its own Host compiler face', async () => {
+    const root = await workspace()
+    const output = await packageOutput(root, 'tools', {
+      name: '@deepseek-ai/dsh-tools', exports: { './typert': './lib/typert.host.js' },
+    })
+    writeFileSync(join(root, 'pnpm-workspace.yaml'), 'packages: []\n')
+    writeFileSync(join(root, 'packages', 'tools', 'tsconfig.host.json'), '{}\n')
+    typertPlugin({ mode: 'package', faces: ['host'] }).writeBundle({ dir: output })
+    expect(generated).toHaveBeenCalledOnce()
+    expect(generated).toHaveBeenCalledWith(['@deepseek-ai/dsh-tools'], ['host'])
+    expect(existsSync(join(output, 'typert.host.js'))).toBe(true)
+  })
   it('lowers standard decorators in TypeScript source dependencies', () => {
     const plugin = typertPlugin()
     expect(plugin.transform('export const value = 1\n', '/workspace/src/plain.ts')).toBeUndefined()
@@ -108,7 +120,7 @@ describe('typertPlugin', () => {
     plugin.writeBundle({ dir: clientOutput })
 
     expect(generated).toHaveBeenCalledOnce()
-    expect(generated).toHaveBeenCalledWith()
+    expect(generated).toHaveBeenCalledWith(['@deepseek-ai/dsh-tools'])
     const packageLib = join(root, 'packages', 'tools', 'lib')
     expect(readFileSync(join(packageLib, 'typert.host.js'), 'utf8')).toBe('export const host = true\n')
     expect(readFileSync(join(packageLib, 'typert.host.d.ts'), 'utf8')).toBe('export declare const host: true\n')
@@ -208,6 +220,7 @@ async function workspace(): Promise<string> {
   const root = mkdtempSync(join(tmpdir(), 'dsh-typert-tsdown-'))
   roots.push(root)
   writeFileSync(join(root, 'tsconfig.host.json'), '{}\n')
+  writeFileSync(join(root, 'pnpm-workspace.yaml'), 'packages: []\n')
   return root
 }
 

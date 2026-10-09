@@ -10,13 +10,14 @@ This directory contains:
 | File | Description |
 |---|---|
 | `cordis.patch.yml` | An `insert` fragment for a profile's `cordis.patch.yml` (three strategies, including a built-in shell write prohibition for read-only stages) |
+| `workflows.patch.yml` | Four workflow domains with low, medium and high tiers; editable token scenario parameters |
 | `examples/frontier-survey-2026-10.md` | An actual `frontier-survey` output: an agent-frontier survey with 50 references checked individually in a browser |
 
 ---
 
 ## 1. Carrier and data structure
 
-- Package: `@deepseek-ai/dsh-experimental-task-strategy` (`0.2.1-alpha.1`)
+- Package: `@deepseek-ai/dsh-experimental-task-strategy` (`0.2.0-rc.2`)
 - Mount point: an `insert` item in the top-level array of a profile's `cordis.patch.yml` (see this directory's `cordis.patch.yml`)
 - Data structure:
 
@@ -35,7 +36,7 @@ strategies:
               tools: { allow: [...], deny: [...] }   # 可选，名字必须在该 preset 作用域真实存在
               model: <可选>       # 需要 provider 支持 agentOptions
               provider: <可选>
-    variants:                     # 可选，见踩坑 #3（本版本不可用）
+    variants:                     # 可选，历史构建限制与当前工作区状态见踩坑 #3
       - { preference: depth, equals: quick, plan: {...} }
 ```
 
@@ -87,10 +88,14 @@ job_kill(jobId)                                     # 取消
 2. **A browser is an exclusive resource, so concurrent tasks interfere.** When two subtasks drive the same browser instance, one can fail and the other can be `aborted`, failing the plan.
    Workaround: give each browser stage one task and use sequential stages instead of parallel tasks in one stage.
 
-3. **`variants` / `preferences` throw in this version**:
+3. **`variants` / `preferences` throw in the `0.2.0-rc.2` code as committed**:
    `Cannot assign to read only property '<key>'`。
    Cause: `dsh-tools` deep-freezes tool arguments, while `schemastery` 3.18 `dict` validation **writes back to the input** (normalizing keys).
    Workaround: express an alternative as a **second strategy id**; switch back to variants after the upstream issue is fixed.
+   Status: Policy Edition 0.1.0 fixes it by passing a cloned value into that validation
+   (`parsePreferences` in `packages/experimental/task-strategy/src/schema.ts`), with tests covering both that a configured variant is
+   selected only by matching author preferences and that preference dictionaries deduplicate independently of Unicode key insertion order.
+   Older builds from the original `0.2.0-rc.2` policy fork commit still throw; the first Policy Edition release includes the fix.
 
 4. **`tools.deny: [write, edit]` does not block `pwsh`.** A denied subtask can still write files with shell redirection; one observed subtask used this to write a report and disclosed it in its output.
    Workaround: read-only stage instructions must explicitly say not to use `pwsh` or any command to write files. This pack includes that prohibition.
@@ -116,3 +121,21 @@ Append the contents of `cordis.patch.yml` to your profile patch:
 ```
 
 If an entry with id `experimental-task-strategy` already exists, replace its `config`. Wait for hot reload after the change (it can take about one minute), then use `task_strategy_list` to confirm the strategies are registered.
+
+<a id="workflow-library"></a>
+## 6. Configurable workflows and token estimates
+
+[workflows.patch.yml](workflows.patch.yml) provides 12 strategies for the Web profile, which already supplies the preset registry and `standard`. SDK/headless compositions must explicitly provide those original services. If a carrier already exists, merge the new `strategies` into its single `config.strategies` list; preserve existing strategies and variants. Do not append a second carrier or duplicate its id. For a source checkout, use the carrier's canonical built file URL as in the existing profile.
+
+| Domain | Id prefix | Low / medium / high children |
+|---|---|---|
+| Coding | `coding-` | 1 / 3 / 6 |
+| Paper research | `paper-research-` | 1 / 3 / 6 |
+| Problem research | `problem-research-` | 1 / 3 / 6 |
+| Solution planning | `solution-planning-` | 1 / 3 / 6 |
+
+Append `low`, `medium` or `high` to the prefix. Low handles a clear small task; medium separates evidence, work and verification; high adds risk analysis, independent review and repair. Stages are sequential. Coding follows reproduce/test/implement/verify when applicable. Research distinguishes verified sources from claims. Planning produces interfaces and acceptance steps without implementation. Instructions guide behavior; filesystem and shell protection still depend on original permissions and tool filters.
+
+Each strategy's `tokenCost` supplies editable assumptions: `callsPerTask`, `contextTokensPerCall` and `outputTokensPerCall`. The bundled values are illustrative scenarios, not measured usage, limits or promises. Remove `tokenCost` to display only known input and unknowns. Query `task_strategy_list` with `{ "task": "original task", "preferences": {} }` to include the original task and preference-selected variant. Registration estimates in the Plugins page exclude the task body. See the [estimation contract](../packages/experimental/task-strategy/README.md#token-estimates).
+
+Use `task_strategy_submit` with `strategy: "coding-medium"` for a named choice, or omit `strategy` under the automatic default. Automatic choice considers task suitability and cost uncertainty; it continues without a user answer. Observe using `job_output` with `wait: true`. Token usage does not determine `maxResultBytes`: seven small results fit 65,536 bytes, while seven 10,000-character results fail that cumulative JSON budget. Increase the result limit deliberately or shorten child outputs; do not treat task count as a byte measurement.

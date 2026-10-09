@@ -1,0 +1,11 @@
+version: 1
+scenario: task-strategy-selection
+profile: headless
+composition: task-strategy-selection
+recording: authored
+header:
+  class: task-strategy-selection
+  pin: true
+  childSystemPrompts: [1, 2]
+  childToolSchemas: [1, 2]
+permission: danger-full-access

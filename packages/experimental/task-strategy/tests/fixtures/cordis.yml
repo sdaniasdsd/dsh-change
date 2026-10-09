@@ -4,6 +4,8 @@
   name: cordis:sessions
 - id: 6303e906
   name: cordis:projections
+- id: cost-meter
+  name: cordis:token-meter
 - id: 9ca64b81
   name: cordis:system-prompt
 - id: 78c5570e

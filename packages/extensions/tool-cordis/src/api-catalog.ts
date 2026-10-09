@@ -3059,13 +3059,13 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'effect-scoped registration disposer.',
       },
       {
-        signature: 'list(): { id: string; description: string }[]',
+        signature: 'list(input?: StrategyInput): StrategyCatalogEntry[]',
         description: 'List registered author policies without evaluating them.',
-        parameters: [],
-        returns: 'detached author strategy descriptions.',
+        parameters: [{ name: 'input', description: 'optional original task and preferences for task-specific estimates.' }],
+        returns: 'detached descriptions and child-cost estimates.',
       },
       {
-        signature: 'catalog(): { strategies: { id: string; description: string }[]; presets: string[] }',
+        signature: '@Remote catalog(): { strategies: StrategyCatalogEntry[]; presets: string[] }',
         description: 'Describe the author policies and permitted child compositions.',
         parameters: [],
         returns: 'detached strategies and the permitted original DSH preset names.',
@@ -3077,9 +3077,38 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'detached plan; rejects unavailable or disallowed compositions.',
       },
       {
+        signature: 'submit(parent: Agent, request: TaskSubmission, signal: AbortSignal): Promise<TaskReceipt>',
+        description: 'Submit a named task once per request id under the exact live owner.',
+        parameters: [{ name: 'parent', description: 'live root Agent owning the original Job.' }, { name: 'request', description: 'stable request id, task, strategy and preferences.' }, { name: 'signal', description: 'first submitter\'s admission signal; accepted work uses Jobs cancellation.' }],
+        returns: 'shared acceptance promise for equal concurrent or repeated requests.',
+      },
+      {
+        signature: 'submitTask(parent: Agent, request: TaskIntakeRequest, signal: AbortSignal): Promise<TaskReceipt>',
+        description: 'Select automatically or honor a named choice before accepting one original Job.',
+        parameters: [{ name: 'parent', description: 'exact live root Agent owning the request.' }, { name: 'request', description: 'stable original id, unchanged task and optional choice.' }, { name: 'signal', description: 'first submitter\'s cancellation until acceptance.' }],
+        returns: 'shared receipt including the chosen strategy, after selector cleanup.',
+      },
+      {
+        signature: 'inspect(parent: Agent, jobId: JobId): TaskRunView',
+        description: 'Read the committed binding and cumulative state of an owned run.',
+        parameters: [{ name: 'parent', description: 'exact live Agent owning the Job.' }, { name: 'jobId', description: 'accepted task identity, unchanged across switches.' }],
+        returns: 'detached task view; rejects foreign or unavailable Jobs.',
+      },
+      {
+        signature: 'requestSwitch(parent: Agent, jobId: JobId, request: TaskSwitch): number',
+        description: 'Reserve replacement by a current named strategy at the next stage barrier.',
+        parameters: [{ name: 'parent', description: 'exact live Agent owning the Job.' }, { name: 'jobId', description: 'accepted task identity.' }, { name: 'request', description: 'target strategy, observed binding epoch, preferences and optional explicit stage cursor.' }],
+        returns: 'reservation command number; inspect state or Job output for commitment or failure.',
+      },
+      {
+        signature: 'resume(parent: Agent, jobId: JobId, expectedBindingEpoch: number): void',
+        description: 'Continue the retained strategy after a rejected replacement.',
+        parameters: [{ name: 'parent', description: 'exact live Agent owning the Job.' }, { name: 'jobId', description: 'waiting task identity.' }, { name: 'expectedBindingEpoch', description: 'binding epoch observed by the caller; stale expectations cannot resume a different binding.' }],
+      },
+      {
         signature: 'async start(parent: Agent, task: string, plan: ExecutionPlan, signal: AbortSignal): Promise<JobId>',
         description: 'Start an original DSH owned job from an upper-authored or policy-authored plan.',
-        parameters: [{ name: 'parent', description: 'exact live upper Agent owning the run.' }, { name: 'task', description: 'user task shared with all stages.' }, { name: 'plan', description: 'captured execution choices.' }, { name: 'signal', description: 'admission cancellation; after acceptance use original job cancellation.' }],
+        parameters: [{ name: 'parent', description: 'exact live upper Agent owning the run.' }, { name: 'task', description: 'nonblank user task shared with all stages, preserving its whitespace.' }, { name: 'plan', description: 'captured execution choices.' }, { name: 'signal', description: 'admission cancellation; after acceptance use original job cancellation.' }],
         returns: 'original DSH job identity; rejects invalid plans before starting work.',
       },
     ],
@@ -4716,7 +4745,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'AuthorStrategy',
-    declaration: 'export interface AuthorStrategy {\n    readonly id: string;\n    readonly description: string;\n    decide(input: StrategyInput): ExecutionPlan | Promise<ExecutionPlan>;\n}',
+    declaration: 'export interface AuthorStrategy {\n    readonly id: string;\n    readonly description: string;\n    readonly cost?: StrategyCostDeclaration;\n    decide(input: StrategyInput): ExecutionPlan;\n}',
   },
   {
     name: 'BackendRegistry',
@@ -7263,8 +7292,24 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface StoredImageAttachment {\n    ref: ImageAttachmentRef;\n    data: Uint8Array;\n}',
   },
   {
+    name: 'StrategyCatalogEntry',
+    declaration: 'export interface StrategyCatalogEntry {\n    readonly id: string;\n    readonly description: string;\n    readonly cost: StrategyTokenCost;\n}',
+  },
+  {
+    name: 'StrategyCostDeclaration',
+    declaration: 'export interface StrategyCostDeclaration {\n    readonly plan: ExecutionPlan;\n    readonly variants?: StrategyDefinition[\'variants\'];\n    readonly assumptions?: TokenCostAssumptions;\n}',
+  },
+  {
+    name: 'StrategyDefinition',
+    declaration: 'export interface StrategyDefinition {\n    readonly id: string;\n    readonly description: string;\n    readonly plan: ExecutionPlan;\n    readonly variants?: {\n        readonly preference: string;\n        readonly equals: string;\n        readonly plan: ExecutionPlan;\n    }[];\n    readonly tokenCost?: TokenCostAssumptions;\n}',
+  },
+  {
     name: 'StrategyInput',
     declaration: 'export interface StrategyInput {\n    readonly task: string;\n    readonly preferences?: Readonly<Record<string, string>>;\n}',
+  },
+  {
+    name: 'StrategyTokenCost',
+    declaration: 'export type StrategyTokenCost = {\n    readonly kind: \'unknown\';\n    readonly reason: \'dynamic-plan\' | \'estimator-unavailable\';\n} | {\n    readonly kind: \'estimated\';\n    readonly basis: \'registration\' | \'task\';\n    readonly planName: string;\n    readonly tasks: number;\n    readonly stages: number;\n    readonly knownInputTokens: number;\n    readonly unknowns: readonly TokenCostUnknown[];\n    readonly assumptions?: TokenCostAssumptions;\n    readonly estimatedInputTokens?: number;\n    readonly estimatedOutputTokens?: number;\n    readonly estimatedTotalTokens?: number;\n};',
   },
   {
     name: 'StreamChunk',
@@ -7463,8 +7508,36 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type TableValueOf<S extends DomainSpec, N extends keyof S[\'tables\']> = S[\'tables\'][N] extends DomainTableSpec<string, infer V> ? V : never;',
   },
   {
+    name: 'TaskIntakeRequest',
+    declaration: 'export interface TaskIntakeRequest extends StrategyInput {\n    readonly requestId: string;\n    readonly selection?: TaskSelection;\n}',
+  },
+  {
+    name: 'TaskReceipt',
+    declaration: 'export interface TaskReceipt {\n    readonly jobId: JobId;\n    readonly name: string;\n    readonly strategy: string;\n}',
+  },
+  {
+    name: 'TaskResult',
+    declaration: 'export interface TaskResult extends ChildResult {\n    readonly stage: string;\n    readonly label: string;\n}',
+  },
+  {
+    name: 'TaskRunView',
+    declaration: 'export interface TaskRunView {\n    readonly phase: \'queued\' | \'boundary\' | \'preparing\' | \'running\' | \'waiting\' | \'stopping\' | \'completed\' | \'failed\' | \'cancelled\';\n    readonly binding: {\n        readonly id: string;\n        readonly revision: string;\n        readonly epoch: number;\n    };\n    readonly nextStage: number;\n    readonly completedStages: number;\n    readonly startedTasks: number;\n    readonly results: TaskResult[];\n    readonly pendingSwitch?: number;\n    readonly error?: string;\n}',
+  },
+  {
+    name: 'TaskSelection',
+    declaration: 'export type TaskSelection = {\n    readonly kind: \'auto\';\n} | {\n    readonly kind: \'named\';\n    readonly strategy: string;\n};',
+  },
+  {
     name: 'TaskStep',
     declaration: 'export interface TaskStep {\n    readonly label: string;\n    readonly preset: string;\n    readonly instruction: string;\n    readonly tools?: {\n        readonly allow?: string[] | undefined;\n        readonly deny?: string[] | undefined;\n    } | undefined;\n    readonly model?: string | undefined;\n    readonly provider?: string | undefined;\n}',
+  },
+  {
+    name: 'TaskSubmission',
+    declaration: 'export interface TaskSubmission extends StrategyInput {\n    readonly requestId: string;\n    readonly strategy: string;\n}',
+  },
+  {
+    name: 'TaskSwitch',
+    declaration: 'export interface TaskSwitch {\n    readonly strategy: string;\n    readonly expectedBindingEpoch: number;\n    readonly preferences?: Readonly<Record<string, string>>;\n    readonly startStage?: number;\n}',
   },
   {
     name: 'TeamId',
@@ -7613,6 +7686,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'TimeOutOfRangeError',
     declaration: 'export interface TimeOutOfRangeError {\n    readonly code: \'time_out_of_range\';\n    readonly message: string;\n}',
+  },
+  {
+    name: 'TokenCostAssumptions',
+    declaration: 'export interface TokenCostAssumptions {\n    readonly callsPerTask: number;\n    readonly contextTokensPerCall: number;\n    readonly outputTokensPerCall: number;\n}',
+  },
+  {
+    name: 'TokenCostUnknown',
+    declaration: 'export type TokenCostUnknown = \'task-body\' | \'system-and-tools\' | \'model-turns\' | \'outputs-and-transfer\' | \'tool-output-variance\' | \'reasoning\' | \'tokenizer-and-cache\' | \'selector-and-parent\' | \'result-metadata-variance\';',
   },
   {
     name: 'TokenMeasurement',

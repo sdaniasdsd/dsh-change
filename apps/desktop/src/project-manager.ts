@@ -85,7 +85,7 @@ export class DesktopProjectManager {
       // Validation only: an unreadable or mismatched runtime descriptor stops preparation before the Host starts.
       readDesktopRuntime(this.runtime.dsh)
       migrateProfileSettings(this.paths.profile)
-      createPluginProfile(this.paths.profile)
+      createPluginProfile(this.paths.profile, this.runtime.dsh)
       removeLinkProjections(this.paths.profile)
     })
   }
@@ -170,7 +170,13 @@ export function createDevelopmentProjectMetadata(projectDir: string, release: De
   writeFileSync(join(projectDir, 'pnpm-workspace.yaml'), workspaceFile(), { mode: 0o600 })
 }
 
-/** Create the first external plugin profile without running a package manager. */
-export function createPluginProfile(projectDir: string): void {
-  initProfile(projectDir, WEB_PROFILE.bundles)
+/**
+ * Create the first external plugin profile without running a package manager.
+ * @param projectDir Profile directory; existing user declarations are preserved.
+ * @param runtimeDir Optional application runtime carrying the policy-edition marker.
+ */
+export function createPluginProfile(projectDir: string, runtimeDir?: string): void {
+  const policyEdition = runtimeDir !== undefined && existsSync(join(runtimeDir, 'policy-workflows.patch.yml'))
+  initProfile(projectDir, policyEdition
+    ? [...WEB_PROFILE.bundles, '@deepseek-ai/dsh-experimental-task-strategy'] : WEB_PROFILE.bundles)
 }

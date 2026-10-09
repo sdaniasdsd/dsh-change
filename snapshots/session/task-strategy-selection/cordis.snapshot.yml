@@ -1,0 +1,37 @@
+- id: llm-deepseek
+  disabled: true
+- id: plugin-package-inventory-deepseek
+  disabled: true
+- id: session-title-llm
+  disabled: true
+- id: session-persistence-jsonl
+  name: '@deepseek-ai/dsh-session-persistence-jsonl'
+  config:
+    root: !!js dshHomePath('sessions')
+    compression: none
+- insert:
+    - id: strategy-native-questions
+      name: '../../../packages/experimental/task-strategy/tests/snapshot-questions.ts'
+    - id: llm-replay
+      name: '@deepseek-ai/dsh-llm-replay'
+      config:
+        providers:
+          - id: deepseek-official
+            name: DeepSeek
+            models:
+              - id: deepseek-v4-flash
+    - id: experimental-task-strategy
+      name: '../../../packages/experimental/task-strategy/tests/snapshot-carrier.ts'
+      config:
+        allowedPresets: [standard]
+        strategies:
+          - id: direct
+            description: Execute one task
+            plan:
+              name: Direct execution
+              stages:
+                - name: work
+                  tasks:
+                    - label: implement
+                      preset: standard
+                      instruction: Implement the requested task.

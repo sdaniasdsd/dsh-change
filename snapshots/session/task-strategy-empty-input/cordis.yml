@@ -1,0 +1,17 @@
+# Explicit experimental composition for task validation; no child is admitted.
+- insert:
+    - id: experimental-task-strategy
+      name: '../../../packages/experimental/task-strategy/tests/snapshot-carrier.ts'
+      config:
+        allowedPresets: [standard]
+        strategies:
+          - id: direct
+            description: Execute one task
+            plan:
+              name: Direct execution
+              stages:
+                - name: work
+                  tasks:
+                    - label: implement
+                      preset: standard
+                      instruction: Implement the requested task.

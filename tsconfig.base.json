@@ -319,6 +319,7 @@
       "@deepseek-ai/dsh-experimental-agent-team": ["./packages/experimental/agent-team/src"],
       "@deepseek-ai/dsh-experimental-task-strategy": ["./packages/experimental/task-strategy/src/index.ts"],
       "@deepseek-ai/dsh-experimental-task-strategy/cordis": ["./packages/experimental/task-strategy/src/cordis.ts"],
+      "@deepseek-ai/dsh-experimental-task-strategy/client": ["./packages/experimental/task-strategy/src/client/index.ts"],
       "@deepseek-ai/dsh-experimental-task-strategy/types": ["./packages/experimental/task-strategy/src/types.ts"],
       "@deepseek-ai/dsh-experimental-auto-review": ["./packages/experimental/auto-review/src"],
       "@deepseek-ai/dsh-experimental-agent-team-profile": ["./packages/experimental/agent-team-profile/src"],

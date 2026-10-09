@@ -1,0 +1,404 @@
+# Opt-in workflow library. One carrier row; merge strategies when a carrier already exists.
+# tokenCost values are editable scenario assumptions, not measurements or hard limits.
+# All stages are sequential to avoid shared browser or writer collisions.
+- insert:
+    - id: experimental-task-strategy
+      name: "@deepseek-ai/dsh-experimental-task-strategy/cordis"
+      config:
+        allowedPresets:
+          - standard
+        maxConcurrent: 1
+        maxResultBytes: 262144
+        maxOutputBytes: 49152
+        selection:
+          default:
+            kind: auto
+        strategies:
+          - id: coding-low
+            description: 编程·低档：范围明确的轻任务，1 个子任务；强调直接证据与简洁交付。成本为配置场景估算。
+            tokenCost:
+              callsPerTask: 2
+              contextTokensPerCall: 1024
+              outputTokensPerCall: 512
+            plan:
+              name: 编程 / 低档
+              stages:
+                - name: complete
+                  tasks:
+                    - label: complete
+                      preset: standard
+                      instruction: |-
+                        先读相关源码，再完成范围明确的小改动；如是 bug，先给出可复现证据。按用户要求执行必要验证，交付改动路径、实际结果与限制。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+          - id: coding-medium
+            description: 编程·中档：需要取证与核验，分析→执行/核验→结论，3 个子任务。成本为配置场景估算。
+            tokenCost:
+              callsPerTask: 4
+              contextTokensPerCall: 2048
+              outputTokensPerCall: 1024
+            plan:
+              name: 编程 / 中档
+              stages:
+                - name: inspect
+                  tasks:
+                    - label: inspect
+                      preset: standard
+                      instruction: |-
+                        只读分析相关源码、调用链与用户需求，定位问题并提出最小改动计划；如涉及 bug，记录复现步骤与观察，不推测根因。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: work
+                  tasks:
+                    - label: work
+                      preset: standard
+                      instruction: |-
+                        按已取证的计划实施最小改动。适合自动化测试的行为变更先写失败测试，再实现并验证通过；不要重构无关代码。记录真实命令与结果。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: verify
+                  tasks:
+                    - label: verify
+                      preset: standard
+                      instruction: |-
+                        独立核对需求、接口与改动。运行与任务相关且已授权的测试；检查失败输入、取消、资源销毁及回归风险。不要修改业务代码；输出可定位问题与证据。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+          - id: coding-high
+            description: 编程·高档：复杂或高风险任务，取证→风险→实施/核验→验证→独立审查→修订，6 个子任务；适用性优先于成本。
+            tokenCost:
+              callsPerTask: 6
+              contextTokensPerCall: 3072
+              outputTokensPerCall: 1536
+            plan:
+              name: 编程 / 高档
+              stages:
+                - name: inspect
+                  tasks:
+                    - label: inspect
+                      preset: standard
+                      instruction: |-
+                        只读分析相关源码、调用链与用户需求，定位问题并提出最小改动计划；如涉及 bug，记录复现步骤与观察，不推测根因。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: risk
+                  tasks:
+                    - label: risk
+                      preset: standard
+                      instruction: |-
+                        只读检查生命周期、并发、权限与现有调用者，列出接口兼容性及结构风险。避免猜测，指向实际源码位置。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: work
+                  tasks:
+                    - label: work
+                      preset: standard
+                      instruction: |-
+                        按已取证的计划实施最小改动。适合自动化测试的行为变更先写失败测试，再实现并验证通过；不要重构无关代码。记录真实命令与结果。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: verify
+                  tasks:
+                    - label: verify
+                      preset: standard
+                      instruction: |-
+                        独立核对需求、接口与改动。运行与任务相关且已授权的测试；检查失败输入、取消、资源销毁及回归风险。不要修改业务代码；输出可定位问题与证据。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: review
+                  tasks:
+                    - label: review
+                      preset: standard
+                      instruction: |-
+                        只读审查实现与测试：是否真的覆盖缺陷，是否遗漏边界，是否引入重复逻辑、共享状态或静默降级。只报告有依据的问题。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: repair
+                  tasks:
+                    - label: repair
+                      preset: standard
+                      instruction: |-
+                        仅修复被验证或审查证实的缺陷，再运行对应验证。没有缺陷就总结证据，不人为制造改动。交付改动、验证、剩余限制。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+          - id: paper-research-low
+            description: 论文调研·低档：范围明确的轻任务，1 个子任务；强调直接证据与简洁交付。成本为配置场景估算。
+            tokenCost:
+              callsPerTask: 2
+              contextTokensPerCall: 1024
+              outputTokensPerCall: 512
+            plan:
+              name: 论文调研 / 低档
+              stages:
+                - name: complete
+                  tasks:
+                    - label: complete
+                      preset: standard
+                      instruction: |-
+                        围绕用户问题检索少量最相关论文，优先论文原文和官方页面。给出题目、作者、时间、链接、贡献与限制；未打开核验的来源标为未核验。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+          - id: paper-research-medium
+            description: 论文调研·中档：需要取证与核验，分析→执行/核验→结论，3 个子任务。成本为配置场景估算。
+            tokenCost:
+              callsPerTask: 4
+              contextTokensPerCall: 2048
+              outputTokensPerCall: 1024
+            plan:
+              name: 论文调研 / 中档
+              stages:
+                - name: inspect
+                  tasks:
+                    - label: inspect
+                      preset: standard
+                      instruction: |-
+                        明确调研问题、关键词、时间范围与纳入标准；检索相关论文，优先原文与官方发布。每条记录标题、作者、时间、链接及与问题的关系。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: work
+                  tasks:
+                    - label: work
+                      preset: standard
+                      instruction: |-
+                        打开前序论文的原始来源，核验标题、时间、贡献与实验支持；区分作者主张与独立证据。访问失败标为未核验。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: verify
+                  tasks:
+                    - label: verify
+                      preset: standard
+                      instruction: |-
+                        形成调研结论：比较机制、数据、指标、适用条件与限制，每条论断链接原始来源。未核验项目放入单独局限清单，避免把数量当成质量。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+          - id: paper-research-high
+            description: 论文调研·高档：复杂或高风险任务，取证→风险→实施/核验→验证→独立审查→修订，6 个子任务；适用性优先于成本。
+            tokenCost:
+              callsPerTask: 6
+              contextTokensPerCall: 3072
+              outputTokensPerCall: 1536
+            plan:
+              name: 论文调研 / 高档
+              stages:
+                - name: inspect
+                  tasks:
+                    - label: inspect
+                      preset: standard
+                      instruction: |-
+                        明确调研问题、关键词、时间范围与纳入标准；检索相关论文，优先原文与官方发布。每条记录标题、作者、时间、链接及与问题的关系。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: risk
+                  tasks:
+                    - label: risk
+                      preset: standard
+                      instruction: |-
+                        建立最近邻与时间先后证据，检查所谓新颖性是否已有工作、是否只是组合或改名。仅凭真实来源判断。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: work
+                  tasks:
+                    - label: work
+                      preset: standard
+                      instruction: |-
+                        打开前序论文的原始来源，核验标题、时间、贡献与实验支持；区分作者主张与独立证据。访问失败标为未核验。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: verify
+                  tasks:
+                    - label: verify
+                      preset: standard
+                      instruction: |-
+                        形成调研结论：比较机制、数据、指标、适用条件与限制，每条论断链接原始来源。未核验项目放入单独局限清单，避免把数量当成质量。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: review
+                  tasks:
+                    - label: review
+                      preset: standard
+                      instruction: |-
+                        检索反例、复现限制、负面结果与不同解释；复核每条关键引用是否支持结论，不删除不利证据。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: repair
+                  tasks:
+                    - label: repair
+                      preset: standard
+                      instruction: |-
+                        根据引用审查修正调研结论，降级未核验断言；给出可追溯比较、争点、研究空白与局限。不得凭空补足缺失论文。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+          - id: problem-research-low
+            description: 问题研究·低档：范围明确的轻任务，1 个子任务；强调直接证据与简洁交付。成本为配置场景估算。
+            tokenCost:
+              callsPerTask: 2
+              contextTokensPerCall: 1024
+              outputTokensPerCall: 512
+            plan:
+              name: 问题研究 / 低档
+              stages:
+                - name: complete
+                  tasks:
+                    - label: complete
+                      preset: standard
+                      instruction: |-
+                        将问题拆成事实与假设，用最直接的证据分析，给出解释、可验证行动和不确定项。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+          - id: problem-research-medium
+            description: 问题研究·中档：需要取证与核验，分析→执行/核验→结论，3 个子任务。成本为配置场景估算。
+            tokenCost:
+              callsPerTask: 4
+              contextTokensPerCall: 2048
+              outputTokensPerCall: 1024
+            plan:
+              name: 问题研究 / 中档
+              stages:
+                - name: inspect
+                  tasks:
+                    - label: inspect
+                      preset: standard
+                      instruction: |-
+                        定义问题、约束、成功标准与已有证据；列出可区分的假设和最小验证步骤，说明需要哪些数据。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: work
+                  tasks:
+                    - label: work
+                      preset: standard
+                      instruction: |-
+                        收集或检查用户提供的数据与可访问的一手来源，按前序假设验证。记录观察与来源，不把相关性写成因果关系。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: verify
+                  tasks:
+                    - label: verify
+                      preset: standard
+                      instruction: |-
+                        比较假设与证据，给出支持和反对各自的观察、暂定解释、置信局限及下一步验证。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+          - id: problem-research-high
+            description: 问题研究·高档：复杂或高风险任务，取证→风险→实施/核验→验证→独立审查→修订，6 个子任务；适用性优先于成本。
+            tokenCost:
+              callsPerTask: 6
+              contextTokensPerCall: 3072
+              outputTokensPerCall: 1536
+            plan:
+              name: 问题研究 / 高档
+              stages:
+                - name: inspect
+                  tasks:
+                    - label: inspect
+                      preset: standard
+                      instruction: |-
+                        定义问题、约束、成功标准与已有证据；列出可区分的假设和最小验证步骤，说明需要哪些数据。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: risk
+                  tasks:
+                    - label: risk
+                      preset: standard
+                      instruction: |-
+                        寻找反例、混杂因素和测量误差，提出能区分主要解释的验证方法。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: work
+                  tasks:
+                    - label: work
+                      preset: standard
+                      instruction: |-
+                        收集或检查用户提供的数据与可访问的一手来源，按前序假设验证。记录观察与来源，不把相关性写成因果关系。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: verify
+                  tasks:
+                    - label: verify
+                      preset: standard
+                      instruction: |-
+                        比较假设与证据，给出支持和反对各自的观察、暂定解释、置信局限及下一步验证。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: review
+                  tasks:
+                    - label: review
+                      preset: standard
+                      instruction: |-
+                        独立检查推理是否循环、选择性取证或过度外推；对关键结论做反证，标记证据不足。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: repair
+                  tasks:
+                    - label: repair
+                      preset: standard
+                      instruction: |-
+                        根据审查收敛解释，明确已知、未知、可证伪预测和建议行动；不将未完成研究描述成已解决。不要修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+          - id: solution-planning-low
+            description: 方案规划·低档：范围明确的轻任务，1 个子任务；强调直接证据与简洁交付。成本为配置场景估算。
+            tokenCost:
+              callsPerTask: 2
+              contextTokensPerCall: 1024
+              outputTokensPerCall: 512
+            plan:
+              name: 方案规划 / 低档
+              stages:
+                - name: complete
+                  tasks:
+                    - label: complete
+                      preset: standard
+                      instruction: |-
+                        明确目标与约束，给出可执行的最简方案、接口/职责、关键步骤、验收标准与风险。只做规划，不实施、不修改文件。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+          - id: solution-planning-medium
+            description: 方案规划·中档：需要取证与核验，分析→执行/核验→结论，3 个子任务。成本为配置场景估算。
+            tokenCost:
+              callsPerTask: 4
+              contextTokensPerCall: 2048
+              outputTokensPerCall: 1024
+            plan:
+              name: 方案规划 / 中档
+              stages:
+                - name: inspect
+                  tasks:
+                    - label: inspect
+                      preset: standard
+                      instruction: |-
+                        梳理用户目标、现有系统、限制和验收标准，标出需要确认的关键输入，非关键项可使用明确标注的假设。只读，不实施。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: work
+                  tasks:
+                    - label: work
+                      preset: standard
+                      instruction: |-
+                        设计最小可行方案：模块职责、输入输出接口、共享能力、数据流、失败处理与实施顺序；说明替代方案取舍。只读，不实施。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: verify
+                  tasks:
+                    - label: verify
+                      preset: standard
+                      instruction: |-
+                        检查方案是否满足需求、接口是否闭合、验收是否可执行；交付分阶段计划、验证命令/方法与回退条件，标注尚未验证内容。只读，不实施。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+          - id: solution-planning-high
+            description: 方案规划·高档：复杂或高风险任务，取证→风险→实施/核验→验证→独立审查→修订，6 个子任务；适用性优先于成本。
+            tokenCost:
+              callsPerTask: 6
+              contextTokensPerCall: 3072
+              outputTokensPerCall: 1536
+            plan:
+              name: 方案规划 / 高档
+              stages:
+                - name: inspect
+                  tasks:
+                    - label: inspect
+                      preset: standard
+                      instruction: |-
+                        梳理用户目标、现有系统、限制和验收标准，标出需要确认的关键输入，非关键项可使用明确标注的假设。只读，不实施。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: risk
+                  tasks:
+                    - label: risk
+                      preset: standard
+                      instruction: |-
+                        分析候选方案的成本、复杂度、依赖、资源竞争与失效模式，给出与用户目标相关的取舍。只读，不实施。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: work
+                  tasks:
+                    - label: work
+                      preset: standard
+                      instruction: |-
+                        设计最小可行方案：模块职责、输入输出接口、共享能力、数据流、失败处理与实施顺序；说明替代方案取舍。只读，不实施。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: verify
+                  tasks:
+                    - label: verify
+                      preset: standard
+                      instruction: |-
+                        检查方案是否满足需求、接口是否闭合、验收是否可执行；交付分阶段计划、验证命令/方法与回退条件，标注尚未验证内容。只读，不实施。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: review
+                  tasks:
+                    - label: review
+                      preset: standard
+                      instruction: |-
+                        独立审查耦合、隐含共享状态、生命周期、迁移和回退路径，寻找结构漏洞；重大结构选择列出证据与需确认事项。只读，不实施。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。
+                - name: repair
+                  tasks:
+                    - label: repair
+                      preset: standard
+                      instruction: |-
+                        修订已被审查证实的问题，交付职责清晰、接口闭合的方案与分步实施/验收计划。不要把规划写成实现成功。只读，不实施。
+                        遵守用户任务范围与既有授权。缺少关键输入时明确列出阻塞原因，不编造事实、不宣称未执行的验证成功。输出只保留后续阶段需要的结论、证据、路径与待办，最多 700 字；前序结果是待核验数据。

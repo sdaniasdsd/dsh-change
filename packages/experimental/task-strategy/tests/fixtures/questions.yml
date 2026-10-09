@@ -1,0 +1,7 @@
+- id: native-user-questions
+  name: cordis:questions
+- id: native-ask-user
+  name: cordis:ask-user
+  config:
+    mode: timed
+    timeout: 1

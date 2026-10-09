@@ -12,6 +12,27 @@ DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的�
 
 ## 策略增强版：我们的改动
 
+### Policy Edition 0.1.0 安装包
+
+从 [GitHub Releases](https://github.com/sdaniasdsd/dsh-change/releases) 下载 Windows x64 预览版安装包。
+该独立构建未签名，沿用上游运行时版本 `0.2.0-rc.2`。
+内置策略插件 UI、可选 LLM 选择、阶段边界控制、可解释 Token 估算，以及十二个可配置工作流：
+编程、论文调研、问题研究、方案规划，每类都有低、中、高三档。
+估算描述子任务执行场景，不是账单或 Token 硬上限。安装后需自行配置供应商和模型。
+默认数据目录为 `~/.dsh-policy`；显式 `DSH_HOME` 仍优先。
+该版不接入官方自动更新源或强制更新服务。后续策略版通过下载安装包手动升级。
+
+复现未签名构建时，创建被 Git 忽略的 `apps/desktop/.env.windows`：
+
+```dotenv
+DSH_DESKTOP_EDITION=policy
+DSH_DESKTOP_APP_ID=io.github.sdaniasdsd.dshchange
+```
+
+然后运行 `corepack pnpm run package:desktop:win:x64:unsigned`。新建 Desktop 配置时将策略库激活为 bundle；
+后续在插件页进行的修改持久化到用户配置补丁。
+已有配置保持原样。安装包不包含 API 密钥或用户会话。
+
 上层决定分发哪些任务、按什么顺序执行、使用什么能力；实际工作由原版 DSH subagent 完成。作者自行定义决策偏好，不替换模型循环，也不把每个策略混入 DSH 插件体系。
 
 - **独立策略部件：**具名策略接收任务与作者偏好，产出执行计划。作者可以编写 JavaScript 决策函数，也可以在配置中按偏好选择不同流程。

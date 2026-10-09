@@ -15,33 +15,56 @@ const plan: ExecutionPlan = {
 const limits = { maxConcurrent: 2, maxTasks: 5, maxResultBytes: 4096 }
 
 describe('author strategy decisions', () => {
-  it('lets an author choose the child composition from preferences', async () => {
+  it.each(['', ' \n\t'])('rejects an empty task before invoking its author: %j', (task) => {
+    const registry = new StrategyRegistry()
+    let decisions = 0
+    registry.register({ id: 'sync', description: 'Synchronous policy', decide: () => { decisions++; return plan } })
+    expect(() => registry.decide('sync', { task })).toThrow('Task must not be empty')
+    expect(decisions).toBe(0)
+  })
+  it('returns a detached decision synchronously without retaining author work', () => {
+    const registry = new StrategyRegistry()
+    registry.register({ id: 'sync', description: 'Synchronous policy', decide: () => plan })
+    const decision = registry.decide('sync', { task: 'task' })
+    expect(decision).toEqual(plan)
+    expect(decision).not.toBe(plan)
+  })
+
+  it('lets an author choose the child composition from preferences', () => {
     const registry = new StrategyRegistry()
     registry.register({ id: 'mine', description: 'My preferences', decide: input => ({
       name: input.task,
       stages: [{ name: 'work', tasks: [{ label: 'work', preset: input.preferences?.mode ?? 'coding', instruction: 'Do it' }] }],
     }) })
-    expect((await registry.decide('mine', { task: 'fix bug', preferences: { mode: 'reader' } }))
+    expect(registry.decide('mine', { task: 'fix bug', preferences: { mode: 'reader' } })
       .stages[0]?.tasks[0]?.preset).toBe('reader')
-    expect(registry.list()).toEqual([{ id: 'mine', description: 'My preferences' }])
+    expect(registry.list()).toEqual([{ id: 'mine', description: 'My preferences', cost: { kind: 'unknown', reason: 'dynamic-plan' } }])
   })
 
-  it('removes only its own registration and detaches the returned plan', async () => {
+  it('removes only its own registration and detaches the returned plan', () => {
     const registry = new StrategyRegistry()
     const remove = registry.register({ id: 'mine', description: 'old', decide: () => plan })
-    const decision = await registry.decide('mine', { task: 'task' })
+    const decision = registry.decide('mine', { task: 'task' })
     Object.assign(decision.stages[0]!.tasks[0]!, { preset: 'changed' })
     expect(plan.stages[0]?.tasks[0]?.preset).toBe('reader')
     remove()
     registry.register({ id: 'mine', description: 'new', decide: () => plan })
     remove()
-    expect(registry.list()).toEqual([{ id: 'mine', description: 'new' }])
+    expect(registry.list()).toEqual([{ id: 'mine', description: 'new', cost: { kind: 'unknown', reason: 'dynamic-plan' } }])
     expect(() => registry.register({ id: 'mine', description: '', decide: () => plan })).toThrow('Duplicate')
-    await expect(registry.decide('missing', { task: 'task' })).rejects.toThrow('Unknown strategy')
+    expect(() => registry.decide('missing', { task: 'task' })).toThrow('Unknown strategy')
   })
 })
 
 describe('phased execution', () => {
+  it('rejects an empty task before dispatching any child', async () => {
+    let started = 0
+    await expect(executePlan(plan, ' \n\t', async () => {
+      started++
+      return { stopReason: 'completed', output: 'unused' }
+    }, { ...limits, signal: new AbortController().signal })).rejects.toThrow('Task must not be empty')
+    expect(started).toBe(0)
+  })
   it('waits for a stage before passing its results to the next stage', async () => {
     const calls: string[] = []
     let running = 0

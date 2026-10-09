@@ -81,13 +81,14 @@ export function typertPlugin(pluginOptions: TypertPluginOptions = {}): TypertPlu
         exports?: unknown
       }
       if (manifest.name === undefined || !hasTypertExport(manifest.exports)) return
-      let artifacts = artifactsByRoot.get(root)
+      const key = `${root}\0${manifest.name}`
+      let artifacts = artifactsByRoot.get(key)
       if (artifacts === undefined) {
         const generator = new WorkspaceTypertGenerator(root, TSC_VERIFIED_INPUT)
         artifacts = pluginOptions.faces === undefined
-          ? generator.generate()
-          : generator.generate(undefined, pluginOptions.faces)
-        artifactsByRoot.set(root, artifacts)
+          ? generator.generate([manifest.name])
+          : generator.generate([manifest.name], pluginOptions.faces)
+        artifactsByRoot.set(key, artifacts)
       }
       emitArtifacts(packageDir, artifacts.filter(candidate => candidate.package === manifest.name))
     },
@@ -153,7 +154,7 @@ function packageRoot(start: string, workspace: string): string | undefined {
 
 function workspaceRoot(start: string): string {
   let current = resolve(start)
-  while (!existsSync(join(current, 'tsconfig.host.json'))) {
+  while (!existsSync(join(current, 'tsconfig.host.json')) || !existsSync(join(current, 'pnpm-workspace.yaml'))) {
     const parent = dirname(current)
     if (parent === current) throw new Error(`typert-generator: cannot find workspace root above ${start}`)
     current = parent

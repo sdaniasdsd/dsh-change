@@ -12,6 +12,27 @@ Upstream documentation: [https://deepseek-harness.github.io/deepseek-harness/](h
 
 ## Policy edition: our changes
 
+### Policy Edition 0.1.0 installer
+
+Download the Windows x64 preview installer from [GitHub Releases](https://github.com/sdaniasdsd/dsh-change/releases).
+This independent build is unsigned and uses the upstream runtime version `0.2.0-rc.2`.
+It includes the strategy plugin UI, optional LLM selection, stage-boundary controls, explainable token estimates,
+and twelve configurable workflows: coding, paper research, problem research and solution planning, each with low, medium and high tiers.
+Estimates describe child-task scenarios, not billing or a hard token limit. Configure your own provider and model after installation.
+The default data directory is `~/.dsh-policy`; an explicit `DSH_HOME` still takes precedence.
+It has no official automatic-update feed or mandatory-update service. Install later fork releases manually.
+
+To reproduce the unsigned build, create the Git-ignored `apps/desktop/.env.windows` with:
+
+```dotenv
+DSH_DESKTOP_EDITION=policy
+DSH_DESKTOP_APP_ID=io.github.sdaniasdsd.dshchange
+```
+
+Then run `corepack pnpm run package:desktop:win:x64:unsigned`. The strategy library is activated as a bundle
+when a new Desktop profile is created; later edits in Plugins persist in the user's profile patch.
+Existing profiles are preserved. The installer contains no API keys or user sessions.
+
 The upper layer decides which tasks to dispatch, in what order, and with which capabilities; original DSH subagents perform the work. Authors define their preferred decision rules rather than replacing the model loop or turning each policy into a DSH plugin.
 
 - **Independent strategies:** named policies accept a task and author preferences and produce an execution plan. Authors can use JavaScript decision functions or configuration-based preference variants.

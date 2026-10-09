@@ -32,6 +32,7 @@ import {
 import { desktopTargetPlatform, resolveDesktopBuildTarget, resolveDesktopTargetBuildPaths } from './desktop-build-paths.mjs'
 import { desktopRuntimeFileExclusion } from './runtime-file-policy.ts'
 import { selectOfficeEngine } from '../../../scripts/libreoffice-packages.mjs'
+import { isPolicyEdition } from './policy-edition.mjs'
 
 const APP_ROOT = resolve(import.meta.dirname, '..')
 const BUILD_PATHS = resolveDesktopTargetBuildPaths()
@@ -156,6 +157,14 @@ async function main(): Promise<void> {
     if (process.platform === 'darwin') {
       await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'sign:dsh-native', () => signMacOSRuntime(DSH_OUTPUT_ROOT, resolveDesktopAppId(process.env), resolveMacOSSigningEnvironment(process.env), target.arch, join(BUILD_PATHS.root, 'signature-cache')))
       await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'sign:primary-native', () => signMacOSRuntime(join(RUNTIME_ROOT, 'primary-runtime'), resolveDesktopAppId(process.env), resolveMacOSSigningEnvironment(process.env), target.arch, join(BUILD_PATHS.root, 'signature-cache')))
+    }
+    if (isPolicyEdition()) {
+      copyFileSync(resolve(APP_ROOT, '../../strategies/workflows.patch.yml'), join(DSH_OUTPUT_ROOT, 'policy-workflows.patch.yml'))
+      const carrier = join(DSH_OUTPUT_ROOT, 'node_modules', '@deepseek-ai/dsh-experimental-task-strategy')
+      copyFileSync(join(DSH_OUTPUT_ROOT, 'policy-workflows.patch.yml'), join(carrier, 'workflows.patch.yml'))
+      const manifest = JSON.parse(readFileSync(join(carrier, 'package.json'), 'utf8')) as Record<string, unknown>
+      manifest.dsh = { bundle: { patch: 'workflows.patch.yml' } }
+      writeFileSync(join(carrier, 'package.json'), `${JSON.stringify(manifest, undefined, 2)}\n`)
     }
     await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:manifests', () => prepareRuntimeManifests(DSH_OUTPUT_ROOT))
     await packagingStep(process.env.DSH_DESKTOP_PACKAGING_RUN_DIR, 'runtime:primary-smoke', async () => smokePrimaryRuntime(join(RUNTIME_ROOT, 'primary-runtime')))

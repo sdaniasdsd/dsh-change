@@ -1,0 +1,19 @@
+# Explicit experimental intake with an original unanswered timed question.
+- insert:
+    - id: strategy-native-questions
+      name: '../../../packages/experimental/task-strategy/tests/snapshot-questions.ts'
+    - id: experimental-task-strategy
+      name: '../../../packages/experimental/task-strategy/tests/snapshot-carrier.ts'
+      config:
+        allowedPresets: [standard]
+        strategies:
+          - id: direct
+            description: Execute one task
+            plan:
+              name: Direct execution
+              stages:
+                - name: work
+                  tasks:
+                    - label: implement
+                      preset: standard
+                      instruction: Implement the requested task.
