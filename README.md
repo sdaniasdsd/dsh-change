@@ -43,7 +43,10 @@ The upper layer decides which tasks to dispatch, in what order, and with which c
 
 The strategy layer is opt-in: launching an unpatched profile retains the original composition. The example configuration provides `direct` and `cautious`; the latter runs two read-only inspections in parallel before implementation, while a `speed=fast` preference selects a shorter flow.
 
-This prototype is not a durable workflow engine: it has no global concurrency quota, automatic retries, pause/resume, or crash recovery. Children share working files, so concurrent writes need an author-chosen safe flow. Real model execution requires a configured model provider; the included integration tests use a scripted, keyless model adapter, not a live-model quality evaluation.
+This prototype supports in-process pause, resume and strategy switching at stage boundaries. It is not a durable workflow engine:
+it has no global concurrency quota, automatic retries or crash recovery. Children share working files, so concurrent writes need
+an author-chosen safe flow. Real model execution requires a configured model provider. Keyless integration checks and seven
+live-model smoke scenarios have been exercised; these checks do not establish model quality or estimate billing accuracy.
 
 Start reading here:
 

@@ -11,10 +11,13 @@ import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
 import * as settings from '@deepseek-ai/dsh-client-ui-settings/client'
 import * as client from '../src/client/index.ts'
-import { adapterSchema } from '../src/schema.ts'
+// This client aggregate must consume the built, neutral schema instead of importing Host source.
+import { adapterSchema } from '../lib/types/schema.js'
+import type {} from '@deepseek-ai/dsh-experimental-task-strategy/remote'
 import type { TaskStrategyCardFace } from '../src/client/task-strategy-card-controller.ts'
 
 const selection = { default: { kind: 'auto' }, timeoutMs: 30000, maxPromptBytes: 32768, maxOutputBytes: 2048, maxTokens: 512 }
+const direct = { id: 'direct', description: 'Direct', cost: { kind: 'unknown', reason: 'dynamic-plan' } } as const
 async function boot() {
   const ctx = new Context()
   const mock = RemoteMock.create()
@@ -22,7 +25,7 @@ async function boot() {
     ns: 'experimental-task-strategy', schema: JSON.parse(JSON.stringify(adapterSchema.toJSON())) as SettingsNamespaceView['schema'],
     value: { selection, allowedPresets: ['minimal'] }, base: { selection, allowedPresets: ['minimal'] }, user: {}, autoGenerate: true, applies: 'live', secrets: [], revision: 4,
   }] }))
-  mock.remote.taskStrategies.catalog.mockResolvedValue(ok({ strategies: [{ id: 'direct', description: 'Direct' }], presets: ['minimal'] }))
+  mock.remote.taskStrategies.catalog.mockResolvedValue(ok({ strategies: [direct], presets: ['minimal'] }))
   await ctx.plugin(TypertRegistry)
   await ctx.plugin({ apply: (owner: Context) => { installConnection(owner, { transport: { rpc: mock.rpc }, location: { hostname: '127.0.0.1' } }) } })
   await ctx.plugin(gateway)
@@ -48,10 +51,10 @@ describe('real client strategy contribution', () => {
       expect(resolveSlotLabel(entry.options.label)).toBe('任务策略')
       locale.setLocale('en')
       expect(resolveSlotLabel(entry.options.label)).toBe('Task strategies')
-      const face = entry.inject!() as TaskStrategyCardFace
+      const face = entry.inject!() as unknown as TaskStrategyCardFace
       face.activateCatalog()
-      await vi.waitFor(() => { expect(face.hooks.taskStrategyCard.getSnapshot().strategies).toEqual([{ id: 'direct', description: 'Direct' }]) })
-      mock.remote.taskStrategies.catalog.mockResolvedValueOnce({ ok: false, error: { code: 'remote/unavailable', message: 'offline' } })
+      await vi.waitFor(() => { expect(face.hooks.taskStrategyCard.getSnapshot().strategies).toEqual([direct]) })
+      mock.remote.taskStrategies.catalog.mockResolvedValueOnce({ ok: false, error: { code: 'gateway/internal', message: 'offline' } })
       face.retryCatalog()
       await vi.waitFor(() => { expect(face.hooks.taskStrategyCard.getSnapshot().catalogStatus).toBe('error') })
       mock.streams.push('$events', { type: 'emit', event: 'settings/document-updated', args: ['experimental-task-strategy', 5] })
