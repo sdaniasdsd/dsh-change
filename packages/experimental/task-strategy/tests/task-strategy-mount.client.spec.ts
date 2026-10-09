@@ -6,6 +6,7 @@ import * as gateway from '@deepseek-ai/dsh-api-gateway/client'
 import settingsRemote from '@deepseek-ai/dsh-api-settings-controller/remote'
 import type { SettingsNamespaceView } from '@deepseek-ai/dsh-api-remotes/client'
 import TypertRegistry from '@deepseek-ai/dsh-typert-registry'
+import { RemoteError } from '@deepseek-ai/dsh-typert-protocol'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import { SlotRegistry } from '@deepseek-ai/dsh-client-ui-renderer/client'
 import { resolveSlotLabel } from '@deepseek-ai/dsh-client-ui-slots'
@@ -54,7 +55,7 @@ describe('real client strategy contribution', () => {
       const face = entry.inject!() as unknown as TaskStrategyCardFace
       face.activateCatalog()
       await vi.waitFor(() => { expect(face.hooks.taskStrategyCard.getSnapshot().strategies).toEqual([direct]) })
-      mock.remote.taskStrategies.catalog.mockResolvedValueOnce({ ok: false, error: { code: 'gateway/internal', message: 'offline' } })
+      mock.remote.taskStrategies.catalog.mockResolvedValueOnce({ ok: false, error: new RemoteError('gateway/internal', 'offline', {}) })
       face.retryCatalog()
       await vi.waitFor(() => { expect(face.hooks.taskStrategyCard.getSnapshot().catalogStatus).toBe('error') })
       mock.streams.push('$events', { type: 'emit', event: 'settings/document-updated', args: ['experimental-task-strategy', 5] })
