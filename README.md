@@ -20,7 +20,7 @@ It includes the strategy plugin UI, optional LLM selection, stage-boundary contr
 and twelve configurable workflows: coding, paper research, problem research and solution planning, each with low, medium and high tiers.
 Estimates describe child-task scenarios, not billing or a hard token limit. Configure your own provider and model after installation.
 The default data directory is `~/.dsh-policy`; an explicit `DSH_HOME` still takes precedence.
-It has no official automatic-update feed or mandatory-update service. Install later fork releases manually.
+It has no official automatic-update feed or mandatory-update service, and the shell disables the mandatory-update overlay. Install later fork releases manually.
 
 To reproduce the unsigned build, create the Git-ignored `apps/desktop/.env.windows` with:
 

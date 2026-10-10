@@ -51,6 +51,7 @@ import { readDesktopLoginShellEnvironment, resolveDesktopLoginShellConfig } from
 import { DesktopMandatoryUpdatePolicy, resolveDesktopPolicyConfig, type DesktopPolicyState } from './mandatory-update-policy.ts'
 import { desktopClientMetadata, desktopClientVersion } from './client-metadata.ts'
 import { DesktopMandatoryUpdateWindow } from './mandatory-update-window.ts'
+import { MANDATORY_UPDATE_DISABLED_ARGUMENT } from './mandatory-update-ipc.ts'
 import { DesktopPolicyTestAuth } from './policy-test-auth.ts'
 import { DesktopUpdateDialog, type UpdateDialogOptions } from './update-dialog.ts'
 import { readDesktopRuntime } from './runtime-tree.ts'
@@ -204,7 +205,7 @@ function platformLoginUrl(authorizeUrl: string): string {
   return url.href
 }
 
-function createWindow(preload: string, show = false, primary = false): BrowserWindow {
+function createWindow(preload: string, show = false, primary = false, mandatoryUpdates = true): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
     height: 820,
@@ -229,6 +230,7 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
     } : {}),
     webPreferences: {
       preload,
+      additionalArguments: mandatoryUpdates ? [] : [MANDATORY_UPDATE_DISABLED_ARGUMENT],
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
@@ -1070,7 +1072,7 @@ async function main(): Promise<void> {
     }
   }
   const createMainWindow = (): BrowserWindow => {
-    const window = createWindow(appPreload, false, true)
+    const window = createWindow(appPreload, false, true, !policyEdition)
     mainWindow = window
     browserGuests.bind(window, (guest, name) => shortcuts.attachGuest(window, guest, name))
     shortcuts.attach(window)

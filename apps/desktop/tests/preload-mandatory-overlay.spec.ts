@@ -10,6 +10,17 @@ const ipc = vi.hoisted(() => ({ on: vi.fn(), off: vi.fn(), invoke: vi.fn(async (
 vi.mock('electron', () => ({ ipcRenderer: ipc }))
 let dom: JSDOM
 let channel: MessageChannel
+it('does not contact mandatory-update IPC when the shell disables its overlay', () => {
+  dom = new JSDOM('<html><body></body></html>')
+  vi.stubGlobal('window', dom.window)
+  const previous = process.argv
+  process.argv = [...previous, '--dsh-mandatory-update-disabled']
+  try {
+    installMandatoryUpdateOverlay()
+    expect(ipc.invoke).not.toHaveBeenCalled()
+    expect(ipc.on).not.toHaveBeenCalled()
+  } finally { process.argv = previous }
+})
 afterEach(() => {
   dom.window.dispatchEvent(new dom.window.Event('pagehide'))
   dom.window.close()

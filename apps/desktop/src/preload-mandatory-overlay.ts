@@ -1,11 +1,12 @@
 /** Mounts the shell-owned Windows update document inside the main window's content area. */
 import { ipcRenderer } from 'electron'
-import { MANDATORY_IPC } from './mandatory-update-ipc.ts'
+import { MANDATORY_IPC, MANDATORY_UPDATE_DISABLED_ARGUMENT } from './mandatory-update-ipc.ts'
 import type { MandatoryUpdateView } from './mandatory-update-window.ts'
 import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
 
-/** Keep update actions on a private channel to the shell frame; the shared product DOM is not a tamper-proof display. */
+/** Keep update actions on a private shell channel; disabled editions create no overlay or IPC subscriptions. */
 export function installMandatoryUpdateOverlay(): void {
+  if (process.argv.includes(MANDATORY_UPDATE_DISABLED_ARGUMENT)) return
   let disposed = false
   let state: MandatoryUpdateView | undefined
   let host: HTMLDivElement | undefined
